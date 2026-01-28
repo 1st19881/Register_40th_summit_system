@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="th">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -11,6 +12,7 @@
             background-color: #f8f9fa;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
+
         .hero-section {
             background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
             color: white;
@@ -19,6 +21,7 @@
             border-bottom-left-radius: 50px;
             border-bottom-right-radius: 50px;
         }
+
         .menu-card {
             border: none;
             border-radius: 20px;
@@ -26,20 +29,24 @@
             cursor: pointer;
             height: 100%;
         }
+
         .menu-card:hover {
             transform: translateY(-10px);
-            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
         }
+
         .icon-box {
             font-size: 3rem;
             margin-bottom: 15px;
         }
+
         .btn-portal {
             text-decoration: none;
             color: inherit;
         }
     </style>
 </head>
+
 <body>
 
     <header class="hero-section text-center">
@@ -51,7 +58,7 @@
 
     <div class="container">
         <div class="row g-4 justify-content-center">
-            
+
             <div class="col-md-4 col-sm-6">
                 <a href="register.php" class="btn-portal">
                     <div class="card menu-card text-center p-4">
@@ -104,9 +111,10 @@
 
         <footer class="mt-5 text-center text-muted">
             <p>© 2026 Summit Auto Body Industry - QR Check-in System</p>
-        </div>
+    </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
+
 </html>

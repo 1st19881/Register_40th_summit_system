@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Summit Auto Body Industry - 40th Anniversary Lucky Draw (PHP 7 + Oracle)
  * * Database Setup (Example):
@@ -8,11 +9,12 @@
  */
 
 // --- Oracle Connection Configuration ---
-$db_user = "YOUR_USERNAME";
-$db_pass = "YOUR_PASSWORD";
-$db_conn_str = "(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=your_host)(PORT=1521))(CONNECT_DATA=(SERVICE_NAME=your_service)))";
+$db_user = "hrmsit";
+$db_pass = "ithrms";
+$db_conn_str = "HRMS";
 
-function get_db_connection() {
+function get_db_connection()
+{
     global $db_user, $db_pass, $db_conn_str;
     $conn = oci_connect($db_user, $db_pass, $db_conn_str, 'AL32UTF8');
     if (!$conn) {
@@ -29,86 +31,211 @@ $action = isset($_GET['action']) ? $_GET['action'] : '';
 
 if ($action === 'get_data') {
     $conn = get_db_connection();
-    
-    // Get available employees
-    $emp_query = "SELECT emp_id, emp_name FROM employees WHERE is_drawn = 0 ORDER BY emp_id ASC";
-    $stid = oci_parse($conn, $emp_query);
-    oci_execute($stid);
-    $employees = [];
-    while ($row = oci_fetch_array($stid, OCI_ASSOC)) {
-        $employees[] = $row;
+
+    try {
+        // Get available employees
+        $emp_query = "SELECT emp_id, emp_name FROM employees WHERE is_drawn = 0 ORDER BY emp_id ASC";
+        $stid_emp = oci_parse($conn, $emp_query);
+        if (!$stid_emp) {
+            throw new Exception('Failed to parse employee query');
+        }
+        if (!oci_execute($stid_emp)) {
+            throw new Exception('Failed to execute employee query');
+        }
+        $employees = [];
+        while ($row = oci_fetch_array($stid_emp, OCI_ASSOC)) {
+            $employees[] = $row;
+        }
+
+        // Get prizes
+        $prize_query = "SELECT prize_name FROM prizes ORDER BY prize_id ASC";
+        $stid_prize = oci_parse($conn, $prize_query);
+        if (!$stid_prize) {
+            throw new Exception('Failed to parse prize query');
+        }
+        if (!oci_execute($stid_prize)) {
+            throw new Exception('Failed to execute prize query');
+        }
+        $prizes = [];
+        while ($row = oci_fetch_array($stid_prize, OCI_ASSOC)) {
+            $prizes[] = $row['PRIZE_NAME'];
+        }
+
+        // Get recent winners
+        $win_query = "SELECT emp_id, emp_name, prize_name FROM winners ORDER BY draw_date DESC";
+        $stid_win = oci_parse($conn, $win_query);
+        if (!$stid_win) {
+            throw new Exception('Failed to parse winners query');
+        }
+        if (!oci_execute($stid_win)) {
+            throw new Exception('Failed to execute winners query');
+        }
+        $winners = [];
+        while ($row = oci_fetch_array($stid_win, OCI_ASSOC)) {
+            $winners[] = $row;
+        }
+
+        // Free all statements
+        oci_free_statement($stid_emp);
+        oci_free_statement($stid_prize);
+        oci_free_statement($stid_win);
+        oci_close($conn);
+
+        header('Content-Type: application/json');
+        echo json_encode(['employees' => $employees, 'prizes' => $prizes, 'winners' => $winners]);
+    } catch (Exception $e) {
+        header('Content-Type: application/json');
+        echo json_encode(['error' => $e->getMessage()]);
     }
-
-    // Get prizes
-    $prize_query = "SELECT prize_name FROM prizes ORDER BY prize_id ASC";
-    $stid = oci_parse($conn, $prize_query);
-    oci_execute($stid);
-    $prizes = [];
-    while ($row = oci_fetch_array($stid, OCI_ASSOC)) {
-        $prizes[] = $row['PRIZE_NAME'];
-    }
-
-    // Get recent winners
-    $win_query = "SELECT emp_id, emp_name, prize_name FROM winners ORDER BY draw_date DESC";
-    $stid = oci_parse($conn, $win_query);
-    oci_execute($stid);
-    $winners = [];
-    while ($row = oci_fetch_array($stid, OCI_ASSOC)) {
-        $winners[] = $row;
-    }
-
-    oci_free_statement($stid);
-    oci_close($conn);
-
-    header('Content-Type: application/json');
-    echo json_encode(['employees' => $employees, 'prizes' => $prizes, 'winners' => $winners]);
     exit;
 }
 
 if ($action === 'draw' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    header('Content-Type: application/json');
     $conn = get_db_connection();
-    $input = json_decode(file_get_contents('php://input'), true);
-    $selected_prize = $input['prize'];
 
-    // 1. Pick a random winner from DB
-    $pick_query = "SELECT * FROM (SELECT emp_id, emp_name FROM employees WHERE is_drawn = 0 ORDER BY dbms_random.value) WHERE rownum = 1";
-    $stid = oci_parse($conn, $pick_query);
-    oci_execute($stid);
-    $winner = oci_fetch_array($stid, OCI_ASSOC);
+    try {
+        // Validate JSON input
+        $input = json_decode(file_get_contents('php://input'), true);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            throw new Exception('Invalid JSON input');
+        }
+        if (empty($input['prize'])) {
+            throw new Exception('Prize name is required');
+        }
+        $selected_prize = trim($input['prize']);
 
-    if ($winner) {
-        // 2. Update employee status
-        $update_query = "UPDATE employees SET is_drawn = 1 WHERE emp_id = :id";
-        $upd_stid = oci_parse($conn, $update_query);
-        oci_bind_by_name($upd_stid, ":id", $winner['EMP_ID']);
-        oci_execute($upd_stid, OCI_DEFAULT);
+        // 1. Pick a random winner from DB
+        $pick_query = "SELECT * FROM (SELECT emp_id, emp_name FROM employees WHERE is_drawn = 0 ORDER BY dbms_random.value) WHERE rownum = 1";
+        $stid = oci_parse($conn, $pick_query);
+        if (!$stid) {
+            throw new Exception('Failed to parse pick winner query');
+        }
+        if (!oci_execute($stid)) {
+            throw new Exception('Failed to execute pick winner query');
+        }
+        $winner = oci_fetch_array($stid, OCI_ASSOC);
 
-        // 3. Log to winners table
-        $log_query = "INSERT INTO winners (emp_id, emp_name, prize_name) VALUES (:id, :name, :prize)";
-        $log_stid = oci_parse($conn, $log_query);
-        oci_bind_by_name($log_stid, ":id", $winner['EMP_ID']);
-        oci_bind_by_name($log_stid, ":name", $winner['EMP_NAME']);
-        oci_bind_by_name($log_stid, ":prize", $selected_prize);
-        oci_execute($log_stid, OCI_DEFAULT);
+        if ($winner) {
+            // 2. Update employee status
+            $update_query = "UPDATE employees SET is_drawn = 1 WHERE emp_id = :id";
+            $upd_stid = oci_parse($conn, $update_query);
+            if (!$upd_stid) {
+                throw new Exception('Failed to parse update query');
+            }
+            oci_bind_by_name($upd_stid, ":id", $winner['EMP_ID']);
+            if (!oci_execute($upd_stid, OCI_DEFAULT)) {
+                throw new Exception('Failed to update employee status');
+            }
 
-        oci_commit($conn);
-        
-        header('Content-Type: application/json');
-        echo json_encode([
-            'success' => true,
-            'winner' => ['id' => $winner['EMP_ID'], 'name' => $winner['EMP_NAME']]
-        ]);
-    } else {
-        echo json_encode(['success' => false, 'message' => 'ไม่มีรายชื่อพนักงานเหลือให้สุ่ม']);
+            // 3. Get next WINNER_ID
+            $max_id_query = "SELECT NVL(MAX(winner_id), 0) + 1 AS next_id FROM winners";
+            $max_stid = oci_parse($conn, $max_id_query);
+            if (!$max_stid) {
+                throw new Exception('Failed to parse max ID query');
+            }
+            if (!oci_execute($max_stid)) {
+                throw new Exception('Failed to execute max ID query');
+            }
+            $max_row = oci_fetch_array($max_stid, OCI_ASSOC);
+            $next_winner_id = $max_row['NEXT_ID'];
+            oci_free_statement($max_stid);
+
+            // 4. Log to winners table with WINNER_ID
+            $log_query = "INSERT INTO winners (winner_id, emp_id, emp_name, prize_name) VALUES (:wid, :id, :name, :prize)";
+            $log_stid = oci_parse($conn, $log_query);
+            if (!$log_stid) {
+                throw new Exception('Failed to parse insert winner query');
+            }
+            oci_bind_by_name($log_stid, ":wid", $next_winner_id);
+            oci_bind_by_name($log_stid, ":id", $winner['EMP_ID']);
+            oci_bind_by_name($log_stid, ":name", $winner['EMP_NAME']);
+            oci_bind_by_name($log_stid, ":prize", $selected_prize);
+            if (!oci_execute($log_stid, OCI_DEFAULT)) {
+                throw new Exception('Failed to insert winner record');
+            }
+
+            // Commit transaction
+            if (!oci_commit($conn)) {
+                throw new Exception('Failed to commit transaction');
+            }
+
+            // Free all statements
+            oci_free_statement($stid);
+            oci_free_statement($upd_stid);
+            oci_free_statement($log_stid);
+            oci_close($conn);
+
+            echo json_encode([
+                'success' => true,
+                'winner' => ['id' => $winner['EMP_ID'], 'name' => $winner['EMP_NAME']]
+            ]);
+        } else {
+            oci_free_statement($stid);
+            oci_close($conn);
+            echo json_encode(['success' => false, 'message' => 'ไม่มีรายชื่อพนักงานเหลือให้สุ่ม']);
+        }
+    } catch (Exception $e) {
+        // Rollback on error
+        if (isset($conn)) {
+            oci_rollback($conn);
+            oci_close($conn);
+        }
+        echo json_encode(['success' => false, 'message' => 'Error: ' . $e->getMessage()]);
     }
-    
-    oci_free_statement($stid);
-    oci_close($conn);
+    exit;
+}
+
+if ($action === 'delete_winner' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    header('Content-Type: application/json');
+    $conn = get_db_connection();
+
+    try {
+        // Validate JSON input
+        $input = json_decode(file_get_contents('php://input'), true);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            throw new Exception('Invalid JSON input');
+        }
+        if (empty($input['emp_id'])) {
+            throw new Exception('Employee ID is required');
+        }
+        $emp_id = trim($input['emp_id']);
+
+        // Delete from winners table (แต่ยังคง is_drawn = 1 ใน employees เพื่อตัดสิทธิ์)
+        $delete_query = "DELETE FROM winners WHERE emp_id = :id";
+        $del_stid = oci_parse($conn, $delete_query);
+        if (!$del_stid) {
+            throw new Exception('Failed to parse delete query');
+        }
+        oci_bind_by_name($del_stid, ":id", $emp_id);
+        if (!oci_execute($del_stid, OCI_DEFAULT)) {
+            throw new Exception('Failed to delete winner record');
+        }
+
+        // Commit transaction
+        if (!oci_commit($conn)) {
+            throw new Exception('Failed to commit transaction');
+        }
+
+        // Free statement
+        oci_free_statement($del_stid);
+        oci_close($conn);
+
+        echo json_encode(['success' => true, 'message' => 'ตัดสิทธิ์ผู้ชนะสำเร็จ']);
+    } catch (Exception $e) {
+        // Rollback on error
+        if (isset($conn)) {
+            oci_rollback($conn);
+            oci_close($conn);
+        }
+        echo json_encode(['success' => false, 'message' => 'Error: ' . $e->getMessage()]);
+    }
     exit;
 }
 ?>
 <!DOCTYPE html>
 <html lang="th">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -119,56 +246,234 @@ if ($action === 'draw' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     <style>
         body {
             font-family: 'Kanit', sans-serif;
-            background: #f8f9fa;
-            background-image: radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.8) 0%, rgba(220, 227, 235, 1) 100%);
+            background: linear-gradient(-45deg, #dce3eb, #e8eef5, #c1d4e8, #a8c4e0);
+            background-size: 400% 400%;
+            animation: gradientShift 15s ease infinite;
             min-height: 100vh;
             color: #1a2a4a;
             overflow-x: hidden;
+            position: relative;
         }
+
+        @keyframes gradientShift {
+            0% {
+                background-position: 0% 50%;
+            }
+
+            50% {
+                background-position: 100% 50%;
+            }
+
+            100% {
+                background-position: 0% 50%;
+            }
+        }
+
         body::before {
-            content: ""; position: fixed; top: 0; left: 0; width: 300px; height: 300px;
-            background: linear-gradient(135deg, #003399 0%, transparent 70%); z-index: -1; clip-path: polygon(0 0, 100% 0, 0 100%);
+            content: "";
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 300px;
+            height: 300px;
+            background: linear-gradient(135deg, #003399 0%, transparent 70%);
+            z-index: -1;
+            clip-path: polygon(0 0, 100% 0, 0 100%);
+            animation: floatTopLeft 20s ease-in-out infinite;
         }
+
+        @keyframes floatTopLeft {
+
+            0%,
+            100% {
+                transform: translate(0, 0);
+                opacity: 0.4;
+            }
+
+            50% {
+                transform: translate(-20px, -20px);
+                opacity: 0.6;
+            }
+        }
+
         body::after {
-            content: ""; position: fixed; bottom: 0; right: 0; width: 300px; height: 300px;
-            background: linear-gradient(-45deg, #003399 0%, transparent 70%); z-index: -1; clip-path: polygon(100% 100%, 100% 0, 0 100%);
+            content: "";
+            position: fixed;
+            bottom: 0;
+            right: 0;
+            width: 300px;
+            height: 300px;
+            background: linear-gradient(-45deg, #003399 0%, transparent 70%);
+            z-index: -1;
+            clip-path: polygon(100% 100%, 100% 0, 0 100%);
+            animation: floatBottomRight 20s ease-in-out infinite;
         }
+
+        @keyframes floatBottomRight {
+
+            0%,
+            100% {
+                transform: translate(0, 0);
+                opacity: 0.4;
+            }
+
+            50% {
+                transform: translate(20px, 20px);
+                opacity: 0.6;
+            }
+        }
+
         .gold-text {
             background: linear-gradient(to bottom, #8a6d3b 0%, #bf953f 22%, #fcf6ba 45%, #b38728 50%, #fbf5b7 55%, #aa771c 78%, #835022 100%);
-            -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: 800;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 800;
             filter: drop-shadow(0 2px 3px rgba(0, 51, 153, 0.2));
         }
+
         .blue-prize-text {
-            color: #003399; font-weight: 900; letter-spacing: -0.02em;
+            color: #003399;
+            font-weight: 900;
+            letter-spacing: -0.02em;
             text-shadow: 2px 2px 0px rgba(255, 255, 255, 1), 0px 4px 10px rgba(0, 51, 153, 0.2);
         }
+
         .glass-card {
-            background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(15px);
-            border: 1px solid rgba(191, 149, 63, 0.3); border-radius: 24px;
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(191, 149, 63, 0.3);
+            border-radius: 24px;
             box-shadow: 0 20px 40px rgba(0, 51, 153, 0.1);
         }
+
         .char-box {
-            display: inline-flex; justify-content: center; align-items: center; width: 42px; height: 60px;
-            background: #fff; border: 2px solid #003399; border-radius: 10px; margin: 2px;
-            font-size: 1.8rem; font-weight: 800; color: #003399; transition: all 0.2s ease;
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            width: 42px;
+            height: 60px;
+            background: #fff;
+            border: 2px solid #003399;
+            border-radius: 10px;
+            margin: 2px;
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: #003399;
+            transition: all 0.2s ease;
         }
-        @media (min-width: 768px) { .char-box { width: 60px; height: 85px; font-size: 2.8rem; margin: 5px; } }
+
+        @media (min-width: 768px) {
+            .char-box {
+                width: 60px;
+                height: 85px;
+                font-size: 2.8rem;
+                margin: 5px;
+            }
+        }
+
         .char-reveal {
             animation: lockIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
-            background: linear-gradient(145deg, #003399, #001a4d); border-color: #fff; color: #fff;
+            background: linear-gradient(145deg, #003399, #001a4d);
+            border-color: #fff;
+            color: #fff;
         }
-        @keyframes lockIn { 0% { transform: scale(1.4); } 100% { transform: scale(1); } }
+
+        @keyframes lockIn {
+            0% {
+                transform: scale(1.4);
+            }
+
+            100% {
+                transform: scale(1);
+            }
+        }
+
         .circle-btn {
-            width: 140px; height: 140px; border-radius: 50%; background: linear-gradient(135deg, #003399 0%, #001a4d 100%);
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            cursor: pointer; transition: all 0.4s; border: 6px solid #bf953f;
+            width: 140px;
+            height: 140px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #003399 0%, #001a4d 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.4s;
+            border: 6px solid #bf953f;
         }
-        .pulse-ring { position: absolute; width: 100%; height: 100%; border-radius: 50%; border: 2px solid #bf953f; animation: pulse 2s infinite; }
-        @keyframes pulse { 0% { transform: scale(1); opacity: 0.6; } 100% { transform: scale(1.6); opacity: 0; } }
-        .prize-tag { background: #003399; color: #fff; padding: 2px 12px; border-radius: 6px; font-size: 0.7rem; font-weight: 800; }
-        .custom-select { appearance: none; background: white; border: 1px solid #bf953f; }
+
+        .pulse-ring {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            border: 2px solid #bf953f;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+                opacity: 0.6;
+            }
+
+            100% {
+                transform: scale(1.6);
+                opacity: 0;
+            }
+        }
+
+        .prize-tag {
+            background: #003399;
+            color: #fff;
+            padding: 2px 12px;
+            border-radius: 6px;
+            font-size: 0.7rem;
+            font-weight: 800;
+        }
+
+        .custom-select {
+            appearance: none;
+            background: white;
+            border: 1px solid #bf953f;
+        }
+
+        .delete-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 28px;
+            height: 28px;
+            cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(231, 76, 60, 0.3);
+        }
+
+        .delete-btn:hover {
+            background: #c0392b;
+            transform: scale(1.1);
+            box-shadow: 0 4px 12px rgba(231, 76, 60, 0.5);
+        }
+
+        .winner-card {
+            position: relative;
+        }
+
+        .winner-card:hover .delete-btn {
+            opacity: 1;
+        }
     </style>
 </head>
+
 <body class="p-4 md:p-8 flex flex-col items-center">
 
     <div class="flex flex-col items-center mb-8">
@@ -208,7 +513,7 @@ if ($action === 'draw' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div class="flex flex-col items-center z-10 w-full">
                     <div id="winnerIDDisplay" class="flex flex-wrap justify-center items-center mb-6">
                         <div class="flex gap-1 md:gap-2">
-                            <?php for($i=0; $i<7; $i++): ?><div class="char-box opacity-20 border-dashed">?</div><?php endfor; ?>
+                            <?php for ($i = 0; $i < 7; $i++): ?><div class="char-box opacity-20 border-dashed">?</div><?php endfor; ?>
                         </div>
                     </div>
                     <div id="winnerNameDisplay" class="min-h-[80px] text-center flex flex-col items-center justify-center"></div>
@@ -247,7 +552,7 @@ if ($action === 'draw' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         async function fetchData() {
             const res = await fetch('?action=get_data');
             const data = await res.json();
-            
+
             // Populate Prizes
             prizeSelect.innerHTML = data.prizes.map(p => `<option value="${p}">${p}</option>`).join('');
             displayPrize.innerText = prizeSelect.value || "---";
@@ -258,7 +563,10 @@ if ($action === 'draw' && $_SERVER['REQUEST_METHOD'] === 'POST') {
 
             // Winner Log
             winnerLog.innerHTML = data.winners.map(w => `
-                <div class="bg-white border p-4 rounded-2xl shadow-sm">
+                <div class="bg-white border p-4 rounded-2xl shadow-sm winner-card">
+                    <button class="delete-btn" onclick="deleteWinner('${w.EMP_ID}', '${w.EMP_NAME}')" title="ลบผู้ชนะ">
+                        ×
+                    </button>
                     <div class="prize-tag mb-2">${w.PRIZE_NAME}</div>
                     <div class="text-[#003399] font-bold">${w.EMP_ID}</div>
                     <div class="text-gray-600 text-sm truncate">${w.EMP_NAME}</div>
@@ -280,8 +588,12 @@ if ($action === 'draw' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             // Call Server to pick winner
             const res = await fetch('?action=draw', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ prize })
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    prize
+                })
             });
             const data = await res.json();
 
@@ -318,21 +630,53 @@ if ($action === 'draw' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             clearInterval(shuffle);
 
             winnerNameDisplay.innerHTML = `<p class="text-[#003399]/50 animate-pulse">ขอแสดงความยินดีกับ...</p>`;
-            await new Promise(r => setTimeout(r, 2000));
+            await new Promise(r => setTimeout(r, 1000));
             winnerNameDisplay.innerHTML = `
                 <div class="name-reveal">
                     <span class="text-2xl md:text-4xl font-black text-[#003399]">${winner.name}</span>
                 </div>
             `;
 
-            confetti({ particleCount: 200, spread: 100, origin: { y: 0.6 }, colors: ['#003399', '#bf953f', '#ffffff'] });
-            
+            confetti({
+                particleCount: 200,
+                spread: 100,
+                origin: {
+                    y: 0.6
+                },
+                colors: ['#003399', '#bf953f', '#ffffff']
+            });
+
             isDrawing = false;
             drawBtn.disabled = false;
             fetchData(); // Refresh data from DB
         }
 
+        async function deleteWinner(empId, empName) {
+            try {
+                const res = await fetch('?action=delete_winner', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        emp_id: empId
+                    })
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    // Refresh data ทันที (silent mode - ไม่แสดง alert)
+                    await fetchData();
+                } else {
+                    console.error('Delete failed:', data.message);
+                }
+            } catch (err) {
+                console.error('Error deleting winner:', err);
+            }
+        }
+
         window.onload = fetchData;
     </script>
 </body>
+
 </html>

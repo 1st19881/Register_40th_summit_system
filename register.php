@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="th">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -16,19 +17,23 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             padding: 20px;
         }
+
         .register-card {
             background: white;
             padding: 40px;
             border-radius: 25px;
-            box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
             width: 100%;
             max-width: 450px;
         }
-        .form-control, .form-select {
+
+        .form-control,
+        .form-select {
             border-radius: 10px;
             padding: 12px;
             margin-bottom: 5px;
         }
+
         .btn-register {
             background: #27ae60;
             border: none;
@@ -38,10 +43,12 @@
             font-size: 1.1rem;
             transition: 0.3s;
         }
+
         .btn-register:hover {
             background: #219150;
             transform: scale(1.02);
         }
+
         .logo-box {
             font-size: 3rem;
             color: #1e3c72;
@@ -49,6 +56,7 @@
         }
     </style>
 </head>
+
 <body>
 
     <div class="register-card text-center">
@@ -93,4 +101,5 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
+
 </html>
