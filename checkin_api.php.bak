@@ -1,0 +1,89 @@
+<?php
+header('Content-Type: application/json');
+require 'config/config.php'; // ไฟล์เชื่อมต่อ Oracle
+
+$qr = $_POST['qr'] ?? '';
+
+if (empty($qr)) {
+    echo json_encode(['status' => 'fail', 'message' => 'ไม่พบข้อมูลจาก QR Code']);
+    exit;
+}
+
+// 1. ตรวจสอบข้อมูลพนักงานและสถานะปัจจุบันจาก Oracle
+$sql_check = "SELECT EMP_NAME, STATUS, PLANT FROM EMP_CHECKIN WHERE QR_CODE = :qr";
+$stid_check = oci_parse($conn, $sql_check);
+oci_bind_by_name($stid_check, ":qr", $qr);
+oci_execute($stid_check);
+$row = oci_fetch_array($stid_check, OCI_ASSOC);
+
+// กรณีที่ 1: ไม่พบรหัสพนักงานในฐานข้อมูล
+if (!$row) {
+    echo json_encode([
+        'status' => 'fail',
+        'message' => 'รหัสพนักงานผิด'
+    ]);
+    exit;
+}
+
+// กรณีที่ 2: เคยเช็คอินเข้างานไปแล้ว (STATUS = DONE)
+if ($row['STATUS'] === 'DONE') {
+    echo json_encode([
+        'status' => 'fail',
+        'message' => 'เช็คอินเข้างานแล้ว',
+        'name' => $row['EMP_NAME']
+    ]);
+    exit;
+}
+
+// กรณีที่ 3: เช็คอินสำเร็จ (STATUS = PENDING) -> ทำการ Update
+// ปรับ IS_ATTENDED = 'Y' ด้วย เพราะถือว่ามาเข้าร่วมงานจริง
+$sql_update = "UPDATE EMP_CHECKIN 
+               SET STATUS = 'DONE', SCAN_TIME = CURRENT_TIMESTAMP, IS_ATTENDED = 'Y' 
+               WHERE QR_CODE = :qr AND STATUS = 'PENDING'";
+$stid_update = oci_parse($conn, $sql_update);
+oci_bind_by_name($stid_update, ":qr", $qr);
+$result = oci_execute($stid_update, OCI_DEFAULT);
+
+if ($result) {
+    // บันทึกข้อมูลลงตาราง employees สำหรับระบบจับสลากรางวัล
+    // ใช้ MERGE เพื่อป้องกันข้อมูลซ้ำ (กรณีที่เคยเช็คอินไปแล้วแต่ยังไม่ได้ถูกจับสลาก)
+    $sql_employee = "MERGE INTO employees e
+                     USING (SELECT :emp_id AS emp_id, :emp_name AS emp_name FROM DUAL) src
+                     ON (e.emp_id = src.emp_id)
+                     WHEN NOT MATCHED THEN
+                       INSERT (emp_id, emp_name, is_drawn)
+                       VALUES (src.emp_id, src.emp_name, 0)";
+    $stid_employee = oci_parse($conn, $sql_employee);
+    $emp_id_from_qr = $qr; // QR_CODE = EMP_ID
+    oci_bind_by_name($stid_employee, ":emp_id", $emp_id_from_qr);
+    oci_bind_by_name($stid_employee, ":emp_name", $row['EMP_NAME']);
+    $emp_insert_result = oci_execute($stid_employee, OCI_DEFAULT);
+
+    if ($emp_insert_result) {
+        oci_commit($conn);
+        oci_free_statement($stid_employee);
+
+        echo json_encode([
+            'status' => 'success',
+            'name' => $row['EMP_NAME'],
+            'plant' => $row['PLANT']
+        ]);
+    } else {
+        oci_rollback($conn);
+        oci_free_statement($stid_employee);
+
+        echo json_encode([
+            'status' => 'fail',
+            'message' => 'เกิดข้อผิดพลาดในการบันทึกข้อมูลเข้าระบบจับสลาก'
+        ]);
+    }
+} else {
+    echo json_encode([
+        'status' => 'fail',
+        'message' => 'เกิดข้อผิดพลาดในการบันทึกข้อมูลลง Oracle'
+    ]);
+}
+
+oci_free_statement($stid_check);
+oci_free_statement($stid_update);
+oci_close($conn);

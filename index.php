@@ -44,6 +44,26 @@
             text-decoration: none;
             color: inherit;
         }
+
+        .hero-logo {
+            max-width: 220px;
+            height: auto;
+            margin-bottom: 25px;
+            filter: drop-shadow(0 4px 15px rgba(0, 0, 0, 0.3));
+            animation: logoFloat 3s ease-in-out infinite;
+        }
+
+        @keyframes logoFloat {
+
+            0%,
+            100% {
+                transform: translateY(0);
+            }
+
+            50% {
+                transform: translateY(-10px);
+            }
+        }
     </style>
 </head>
 
@@ -51,6 +71,7 @@
 
     <header class="hero-section text-center">
         <div class="container">
+            <img src="logo/logo.png" alt="Summit Auto Body Industry 40th Anniversary" class="hero-logo">
             <h1 class="display-4 fw-bold">ระบบลงทะเบียนเข้างาน</h1>
             <p class="lead">กรุณาเลือกรายการที่ต้องการดำเนินการ</p>
         </div>
@@ -59,6 +80,7 @@
     <div class="container">
         <div class="row g-4 justify-content-center">
 
+            <!-- ปิดเมนูลงทะเบียนใหม่ และ รับบัตรใบเดิม ชั่วคราว
             <div class="col-md-4 col-sm-6">
                 <a href="register.php" class="btn-portal">
                     <div class="card menu-card text-center p-4">
@@ -82,6 +104,7 @@
                     </div>
                 </a>
             </div>
+            -->
 
             <div class="col-md-4 col-sm-6">
                 <a href="scan.php" class="btn-portal">
@@ -89,7 +112,7 @@
                         <div class="icon-box text-warning">
                             <i class="fas fa-qrcode"></i>
                         </div>
-                        <h3 class="fw-bold">แสกนเข้างาน</h3>
+                        <h3 class="fw-bold">เช็คอินเข้างาน</h3>
                         <p class="text-muted text-danger fw-bold">* สำหรับเจ้าหน้าที่เท่านั้น</p>
                     </div>
                 </a>
@@ -106,11 +129,46 @@
                     </div>
                 </a>
             </div>
+            <div class="col-md-4 col-sm-6">
+                <a href="upload_employee.php" class="btn-portal">
+                    <div class="card menu-card text-center p-4">
+                        <div class="icon-box text-info">
+                            <i class="fas fa-upload"></i>
+                        </div>
+                        <h3 class="fw-bold">อัพโหลดข้อมูลพนักงาน</h3>
+                        <p class="text-muted">นำเข้าข้อมูลพนักงานจากไฟล์ CSV</p>
+                    </div>
+                </a>
+            </div>
+
+            <div class="col-md-4 col-sm-6">
+                <a href="manage_prizes.php" class="btn-portal">
+                    <div class="card menu-card text-center p-4">
+                        <div class="icon-box text-secondary">
+                            <i class="fas fa-gift"></i>
+                        </div>
+                        <h3 class="fw-bold">จัดการของรางวัล</h3>
+                        <p class="text-muted">เพิ่ม แก้ไข ลบ รายการของรางวัล</p>
+                    </div>
+                </a>
+            </div>
+
+            <div class="col-md-4 col-sm-6">
+                <a href="lucky_draw.php" class="btn-portal">
+                    <div class="card menu-card text-center p-4" style="border-top: 5px solid #bf953f;">
+                        <div class="icon-box" style="color: #bf953f;">
+                            <i class="fas fa-trophy"></i>
+                        </div>
+                        <h3 class="fw-bold">จับรางวัล</h3>
+                        <p class="text-muted text-danger fw-bold">* สำหรับเจ้าหน้าที่เท่านั้น</p>
+                    </div>
+                </a>
+            </div>
 
         </div>
 
         <footer class="mt-5 text-center text-muted">
-            <p>© 2026 Summit Auto Body Industry - QR Check-in System</p>
+            <p>? 2026 Summit Auto Body Industry - QR Check-in System</p>
     </div>
     </div>
 

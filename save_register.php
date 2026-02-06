@@ -1,5 +1,5 @@
 <?php
-require 'config/config.php'; // р╣Др╕Яр╕ер╣Мр╣Ар╕Кр╕╖р╣Ир╕нр╕бр╕Хр╣Ир╕н Oracle
+require 'config/config.php'; //     ┼  р  ╫  ═┴╡  ═ Oracle
 
 $emp_id   = trim($_POST['emp_id'] ?? '');
 $emp_name = trim($_POST['emp_name'] ?? '');
@@ -10,7 +10,7 @@ if (empty($emp_id)) {
     exit;
 }
 
-// 1. р╕Хр╕гр╕зр╕Ир╕кр╕нр╕Ър╕гр╕лр╕▒р╕кр╕Лр╣Йр╕│
+// 1. ╡├╟  ╩═  ├╦╤╩    ╙
 $sql_check = "SELECT COUNT(*) AS TOTAL FROM EMP_CHECKIN WHERE EMP_ID = :id";
 $stid_check = oci_parse($conn, $sql_check);
 oci_bind_by_name($stid_check, ":id", $emp_id);
@@ -18,15 +18,15 @@ oci_execute($stid_check);
 $row_check = oci_fetch_array($stid_check, OCI_ASSOC);
 
 if ($row_check['TOTAL'] > 0) {
-    // р╣Бр╕Ир╣Йр╕Зр╣Ар╕Хр╕╖р╕нр╕Щр╕кр╕зр╕вр╣Ж р╕зр╣Ир╕▓р╣Ар╕Др╕вр╕ер╕Зр╕Чр╕░р╣Ар╕Ър╕╡р╕вр╕Щр╣Бр╕ер╣Йр╕з
+    //         р╡╫═  ╩╟┬   ╟  ╥р  ┬┼  ╖╨р  ╒┬    ┼  ╟
     echo "<!DOCTYPE html><html><head>
           <script src='https://cdn.jsdelivr.net/npm/sweetalert2@11'></script>
           <link rel='stylesheet' href='https://fonts.googleapis.com/css2?family=Sarabun&display=swap'>
           <style>body { font-family: 'Sarabun', sans-serif; background: #0f172a; }</style>
           </head><body><script>
             Swal.fire({
-                title: 'р╕ер╕Зр╕Чр╕░р╣Ар╕Ър╕╡р╕вр╕Щр╣Др╕Ыр╣Бр╕ер╣Йр╕з!',
-                text: 'р╕гр╕лр╕▒р╕кр╕Юр╕Щр╕▒р╕Бр╕Зр╕▓р╕Щ $emp_id р╕бр╕╡р╕Вр╣Йр╕нр╕бр╕╣р╕ер╣Гр╕Щр╕гр╕░р╕Ър╕Ър╣Бр╕ер╣Йр╕зр╕Др╕гр╕▒р╕Ъ',
+                title: '┼  ╖╨р  ╒┬        ┼  ╟!',
+                text: '├╦╤╩    ╤    ╥   $emp_id ┴╒    ═┴┘┼    ├╨      ┼  ╟  ├╤  ',
                 icon: 'info',
                 timer: 2000,
                 showConfirmButton: false,
@@ -36,7 +36,7 @@ if ($row_check['TOTAL'] > 0) {
     exit;
 }
 
-// 2. р╕Ър╕▒р╕Щр╕Чр╕╢р╕Бр╕Вр╣Йр╕нр╕бр╕╣р╕ер╣Гр╕лр╕бр╣И
+// 2.   ╤  ╖╓      ═┴┘┼  ╦┴  
 $sql_ins = "INSERT INTO EMP_CHECKIN (QR_CODE, EMP_ID, EMP_NAME, PLANT, STATUS) VALUES (:id, :id, :name, :plant, 'PENDING')";
 $stid_ins = oci_parse($conn, $sql_ins);
 oci_bind_by_name($stid_ins, ":id", $emp_id);
@@ -44,7 +44,7 @@ oci_bind_by_name($stid_ins, ":name", $emp_name);
 oci_bind_by_name($stid_ins, ":plant", $plant);
 oci_execute($stid_ins, OCI_COMMIT_ON_SUCCESS);
 
-// р╕кр╕гр╣Йр╕▓р╕З QR code URL р╣Вр╕Фр╕вр╣Гр╕Кр╣Й API р╕ар╕▓р╕вр╕Щр╕нр╕Бр╣Бр╕Ър╕Ъ HTTPS
+// ╩├  ╥   QR code URL   ┤┬       API └╥┬  ═         HTTPS
 $qr_proxied = "https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=" . urlencode($emp_id);
 ?>
 
@@ -54,13 +54,13 @@ $qr_proxied = "https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=" .
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>р╕ер╕Зр╕Чр╕░р╣Ар╕Ър╕╡р╕вр╕Щр╕кр╕│р╣Ар╕гр╣Зр╕И | SAB 40th</title>
+    <title>┼  ╖╨р  ╒┬  ╩╙р├     | SAB 40th</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         body {
             background: #0f172a;
-            /* р╕Юр╕╖р╣Йр╕Щр╕лр╕ер╕▒р╕Зр╕кр╕╡р╣Ар╕Вр╣Йр╕бр╕Фр╕╣р╕Юр╕гр╕╡р╣Ар╕бр╕╡р╕вр╕б */
+            /*   ╫    ╦┼╤  ╩╒р    ┴┤┘  ├╒р┴╒┬┴ */
             font-family: 'Kanit', sans-serif;
             min-height: 100vh;
             display: flex;
@@ -144,32 +144,32 @@ $qr_proxied = "https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=" .
             </div>
 
             <div class="info-area">
-                <div class="label">р╕Кр╕╖р╣Ир╕нр╕Юр╕Щр╕▒р╕Бр╕Зр╕▓р╕Щ</div>
+                <div class="label">  ╫  ═    ╤    ╥  </div>
                 <div class="value"><?php echo htmlspecialchars($emp_name); ?></div>
 
                 <div class="row">
                     <div class="col-6">
-                        <div class="label">р╕гр╕лр╕▒р╕кр╕Юр╕Щр╕▒р╕Бр╕Зр╕▓р╕Щ</div>
+                        <div class="label">├╦╤╩    ╤    ╥  </div>
                         <div class="value"><?php echo htmlspecialchars($emp_id); ?></div>
                     </div>
                     <div class="col-6 text-end">
-                        <div class="label">р╣Вр╕гр╕Зр╕Зр╕▓р╕Щ (Plant)</div>
+                        <div class="label">  ├    ╥   (Plant)</div>
                         <div class="value"><?php echo htmlspecialchars($plant); ?></div>
                     </div>
                 </div>
 
                 <div class="text-center mt-3 py-2 rounded-pill" style="background: #f1f5f9; font-size: 0.75rem;">
-                    <i class="fas fa-check-circle text-success"></i> р╕ер╕Зр╕Чр╕░р╣Ар╕Ър╕╡р╕вр╕Щр╕кр╕│р╣Ар╕гр╣Зр╕И
+                    <i class="fas fa-check-circle text-success"></i> ┼  ╖╨р  ╒┬  ╩╙р├    
                 </div>
             </div>
         </div>
 
         <div class="mt-4">
             <button onclick="downloadImg()" class="btn btn-primary btn-lg w-100 mb-3 shadow" style="border-radius: 15px; background: #10b981; border:none;">
-                <i class="fas fa-download me-2"></i> р╕Ър╕▒р╕Щр╕Чр╕╢р╕Бр╣Ар╕Ыр╣Зр╕Щр╕гр╕╣р╕Ыр╕ар╕▓р╕Ю
+                <i class="fas fa-download me-2"></i>   ╤  ╖╓  р      ├┘  └╥  
             </button>
             <a href="index.php" class="btn btn-outline-light w-100 border-0">
-                <i class="fas fa-home me-1"></i> р╕Бр╕ер╕▒р╕Ър╕лр╕Щр╣Йр╕▓р╕лр╕ер╕▒р╕Б
+                <i class="fas fa-home me-1"></i>   ┼╤  ╦    ╥╦┼╤  
             </a>
         </div>
     </div>

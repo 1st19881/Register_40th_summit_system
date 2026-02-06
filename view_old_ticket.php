@@ -51,7 +51,7 @@ $qr_proxied = "https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=" .
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 20px;
+            padding: 15px;
         }
 
         .ticket-box {
@@ -73,8 +73,16 @@ $qr_proxied = "https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=" .
             text-align: center;
         }
 
+        .ticket-head h5 {
+            font-size: 1.25rem;
+        }
+
+        .ticket-head p {
+            font-size: 0.85rem;
+        }
+
         .qr-area {
-            padding: 40px;
+            padding: 40px 20px;
             text-align: center;
             background: #f8fafc;
         }
@@ -88,27 +96,127 @@ $qr_proxied = "https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=" .
         }
 
         .qr-border img {
-            width: 200px;
-            height: 200px;
+            width: 100%;
+            max-width: 200px;
+            height: auto;
+            aspect-ratio: 1;
         }
 
         .info-area {
-            padding: 20px 30px 40px;
+            padding: 25px 20px 30px;
             border-top: 2px dashed #cbd5e1;
             color: #1e293b;
         }
 
         .label {
-            font-size: 0.75rem;
+            font-size: 0.7rem;
             color: #64748b;
             text-transform: uppercase;
             font-weight: bold;
+            letter-spacing: 0.5px;
         }
 
         .value {
-            font-size: 1.15rem;
+            font-size: 1rem;
             font-weight: 700;
             margin-bottom: 15px;
+            word-break: break-word;
+        }
+
+        .info-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 0;
+        }
+
+        .info-row>div {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .badge-check {
+            font-size: 0.75rem;
+            padding: 8px 12px;
+        }
+
+        /* Responsive Styles */
+        @media (max-width: 576px) {
+            body {
+                padding: 10px;
+            }
+
+            .ticket-box {
+                max-width: 100%;
+            }
+
+            .qr-area {
+                padding: 25px 15px;
+            }
+
+            .qr-border img {
+                max-width: 150px;
+            }
+
+            .info-area {
+                padding: 20px 15px 25px;
+            }
+
+            .value {
+                font-size: 0.95rem;
+            }
+
+            .ticket-head {
+                padding: 25px 15px;
+            }
+
+            .ticket-head h5 {
+                font-size: 1.1rem;
+            }
+
+            .btn-lg {
+                padding: 0.7rem 1.5rem;
+                font-size: 0.95rem;
+            }
+        }
+
+        @media (max-width: 360px) {
+            .qr-border img {
+                max-width: 120px;
+            }
+
+            .info-area {
+                padding: 15px 12px 20px;
+            }
+
+            .value {
+                font-size: 0.9rem;
+                margin-bottom: 12px;
+            }
+
+            .label {
+                font-size: 0.65rem;
+            }
+        }
+
+        @media (min-width: 768px) {
+            .ticket-box {
+                max-width: 400px;
+            }
+
+            .qr-area {
+                padding: 45px 30px;
+            }
+
+            .qr-border img {
+                max-width: 220px;
+            }
+        }
+
+        /* Touch-friendly buttons */
+        @media (hover: none) and (pointer: coarse) {
+            button {
+                min-height: 44px;
+            }
         }
     </style>
 </head>
@@ -132,27 +240,27 @@ $qr_proxied = "https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=" .
                 <div class="label">ชื่อพนักงาน</div>
                 <div class="value"><?php echo htmlspecialchars($row['EMP_NAME']); ?></div>
 
-                <div class="row">
-                    <div class="col-6">
+                <div class="info-row">
+                    <div>
                         <div class="label">รหัสพนักงาน</div>
                         <div class="value"><?php echo htmlspecialchars($emp_id); ?></div>
                     </div>
-                    <div class="col-6 text-end">
+                    <div>
                         <div class="label">โรงงาน (Plant)</div>
                         <div class="value"><?php echo htmlspecialchars($row['PLANT']); ?></div>
                     </div>
                 </div>
 
-                <div class="text-center mt-3 py-2 rounded-pill" style="background: #f1f5f9; font-size: 0.75rem;">
+                <div class="text-center mt-3 py-2 px-3 rounded-pill badge-check" style="background: #f1f5f9; font-size: 0.75rem;">
                     <i class="fas fa-check-circle text-primary"></i> ข้อมูลลงทะเบียนถูกต้อง
                 </div>
             </div>
         </div>
 
         <div class="mt-4">
-            <button onclick="saveAsImage()" class="btn btn-primary btn-lg w-100 mb-3 shadow" style="border-radius: 15px; background: #10b981; border:none;">
+            <!-- <button onclick="saveAsImage()" class="btn btn-primary btn-lg w-100 mb-3 shadow" style="border-radius: 15px; background: #10b981; border:none;">
                 <i class="fas fa-download me-2"></i> บันทึกเป็นรูปภาพ
-            </button>
+            </button> -->
             <a href="index.php" class="btn btn-outline-light w-100 border-0">
                 <i class="fas fa-home me-1"></i> กลับหน้าหลัก
             </a>

@@ -1,88 +1,111 @@
 <?php
 header('Content-Type: application/json');
-require 'config/config.php'; // ไฟล์เชื่อมต่อ Oracle
 
-$qr = $_POST['qr'] ?? '';
+try {
+    require 'config/config.php';
 
-if (empty($qr)) {
-    echo json_encode(['status' => 'fail', 'message' => 'ไม่พบข้อมูลจาก QR Code']);
-    exit;
-}
+    $qr = $_POST['qr'] ?? '';
 
-// 1. ตรวจสอบข้อมูลพนักงานและสถานะปัจจุบันจาก Oracle
-$sql_check = "SELECT EMP_NAME, STATUS, PLANT FROM EMP_CHECKIN WHERE QR_CODE = :qr";
-$stid_check = oci_parse($conn, $sql_check);
-oci_bind_by_name($stid_check, ":qr", $qr);
-oci_execute($stid_check);
-$row = oci_fetch_array($stid_check, OCI_ASSOC);
+    if (empty($qr)) {
+        echo json_encode(['status' => 'fail', 'message' => 'ไม่พบข้อมูล QR Code']);
+        exit;
+    }
 
-// กรณีที่ 1: ไม่พบรหัสพนักงานในฐานข้อมูล
-if (!$row) {
-    echo json_encode([
-        'status' => 'fail',
-        'message' => 'รหัสพนักงานผิด'
-    ]);
-    exit;
-}
+    // 1. ตรวจสอบข้อมูลพนักงานจาก Oracle
+    $sql_check = "SELECT EMP_NAME, STATUS, PLANT, TABLE_CODE FROM EMP_CHECKIN WHERE QR_CODE = :qr";
+    $stid_check = oci_parse($conn, $sql_check);
+    oci_bind_by_name($stid_check, ":qr", $qr);
+    oci_execute($stid_check);
+    $row = oci_fetch_array($stid_check, OCI_ASSOC);
 
-// กรณีที่ 2: เคยเช็คอินเข้างานไปแล้ว (STATUS = DONE)
-if ($row['STATUS'] === 'DONE') {
-    echo json_encode([
-        'status' => 'fail',
-        'message' => 'เช็คอินเข้างานแล้ว',
-        'name' => $row['EMP_NAME']
-    ]);
-    exit;
-}
-
-// กรณีที่ 3: เช็คอินสำเร็จ (STATUS = PENDING) -> ทำการ Update
-$sql_update = "UPDATE EMP_CHECKIN 
-               SET STATUS = 'DONE', SCAN_TIME = CURRENT_TIMESTAMP 
-               WHERE QR_CODE = :qr AND STATUS = 'PENDING'";
-$stid_update = oci_parse($conn, $sql_update);
-oci_bind_by_name($stid_update, ":qr", $qr);
-$result = oci_execute($stid_update, OCI_DEFAULT);
-
-if ($result) {
-    // บันทึกข้อมูลลงตาราง employees สำหรับระบบจับสลากรางวัล
-    // ใช้ MERGE เพื่อป้องกันข้อมูลซ้ำ (กรณีที่เคยเช็คอินไปแล้วแต่ยังไม่ได้ถูกจับสลาก)
-    $sql_employee = "MERGE INTO employees e
-                     USING (SELECT :emp_id AS emp_id, :emp_name AS emp_name FROM DUAL) src
-                     ON (e.emp_id = src.emp_id)
-                     WHEN NOT MATCHED THEN
-                       INSERT (emp_id, emp_name, is_drawn)
-                       VALUES (src.emp_id, src.emp_name, 0)";
-    $stid_employee = oci_parse($conn, $sql_employee);
-    $emp_id_from_qr = $qr; // QR_CODE = EMP_ID
-    oci_bind_by_name($stid_employee, ":emp_id", $emp_id_from_qr);
-    oci_bind_by_name($stid_employee, ":emp_name", $row['EMP_NAME']);
-    $emp_insert_result = oci_execute($stid_employee, OCI_DEFAULT);
-
-    if ($emp_insert_result) {
-        oci_commit($conn);
-        oci_free_statement($stid_employee);
-
+    // กรณี 1: ไม่พบข้อมูลพนักงาน
+    if (!$row) {
+        oci_free_statement($stid_check);
+        oci_close($conn);
         echo json_encode([
-            'status' => 'success',
-            'name' => $row['EMP_NAME'],
-            'plant' => $row['PLANT']
+            'status' => 'fail',
+            'message' => 'ไม่พบข้อมูล'
         ]);
+        exit;
+    }
+
+    // กรณี 2: เช็คอินแล้ว (STATUS = DONE)
+    if ($row['STATUS'] === 'DONE') {
+        oci_free_statement($stid_check);
+        oci_close($conn);
+        echo json_encode([
+            'status' => 'already',
+            'message' => 'เช็คอินแล้ว',
+            'name' => $row['EMP_NAME']
+        ]);
+        exit;
+    }
+
+    // กรณี 3: รอเช็คอิน (STATUS = PENDING) -> ทำการ Update
+    // เพิ่ม IS_ATTENDED = 'Y' เพื่อ นับเข้างานในแดชบอร์ด
+    $sql_update = "UPDATE EMP_CHECKIN 
+                   SET STATUS = 'DONE', SCAN_TIME = CURRENT_TIMESTAMP, IS_ATTENDED = 'Y' 
+                   WHERE QR_CODE = :qr AND STATUS = 'PENDING'";
+    $stid_update = oci_parse($conn, $sql_update);
+    oci_bind_by_name($stid_update, ":qr", $qr);
+    $result = oci_execute($stid_update, OCI_DEFAULT);
+
+    if ($result) {
+        // บันทึกลงตาราง employees สำหรับจับรางวัล
+        // ใช้ MERGE เพื่อไม่ให้เกิดข้อมูลซ้ำ (ถ้ามีอยู่แล้วก็ไม่ทำอะไร)
+        $sql_employee = "MERGE INTO employees e
+                         USING (SELECT :emp_id AS emp_id, :emp_name AS emp_name, :plant AS plant FROM DUAL) src
+                         ON (e.emp_id = src.emp_id)
+                         WHEN NOT MATCHED THEN
+                           INSERT (emp_id, emp_name, plant, is_drawn)
+                           VALUES (src.emp_id, src.emp_name, src.plant, 0)";
+        $stid_employee = oci_parse($conn, $sql_employee);
+        $emp_id_from_qr = $qr; // QR_CODE = EMP_ID
+        oci_bind_by_name($stid_employee, ":emp_id", $emp_id_from_qr);
+        oci_bind_by_name($stid_employee, ":emp_name", $row['EMP_NAME']);
+        oci_bind_by_name($stid_employee, ":plant", $row['PLANT']);
+        $emp_insert_result = oci_execute($stid_employee, OCI_DEFAULT);
+
+        if ($emp_insert_result) {
+            oci_commit($conn);
+            oci_free_statement($stid_employee);
+            oci_free_statement($stid_check);
+            oci_free_statement($stid_update);
+            oci_close($conn);
+
+            echo json_encode([
+                'status' => 'success',
+                'name' => $row['EMP_NAME'],
+                'plant' => $row['PLANT'],
+                'table_code' => $row['TABLE_CODE'] ?? '-'
+            ]);
+        } else {
+            $e = oci_error($stid_employee);
+            oci_rollback($conn);
+            oci_free_statement($stid_employee);
+            oci_free_statement($stid_check);
+            oci_free_statement($stid_update);
+            oci_close($conn);
+
+            echo json_encode([
+                'status' => 'fail',
+                'message' => 'ไม่สามารถบันทึกข้อมูลได้: ' . ($e['message'] ?? 'Unknown error')
+            ]);
+        }
     } else {
-        oci_rollback($conn);
-        oci_free_statement($stid_employee);
+        $e = oci_error($stid_update);
+        oci_free_statement($stid_check);
+        oci_free_statement($stid_update);
+        oci_close($conn);
 
         echo json_encode([
             'status' => 'fail',
-            'message' => 'เกิดข้อผิดพลาดในการบันทึกข้อมูลเข้าระบบจับสลาก'
+            'message' => 'เกิดข้อผิดพลาดในฐานข้อมูล Oracle: ' . ($e['message'] ?? 'Unknown error')
         ]);
     }
-} else {
+} catch (Exception $ex) {
     echo json_encode([
         'status' => 'fail',
-        'message' => 'เกิดข้อผิดพลาดในการบันทึกข้อมูลลง Oracle'
+        'message' => 'Server Error: ' . $ex->getMessage()
     ]);
 }
-
-oci_free_statement($stid_check);
-oci_free_statement($stid_update);
-oci_close($conn);
