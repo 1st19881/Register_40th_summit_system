@@ -1,5 +1,6 @@
 <?php
-require 'config/config.php'; // ������������������� Oracle
+require 'auth.php';
+require 'config/config.php'; // เน€เธ�เธทเน�เธญเธกเธ•เน�เธญ Oracle
 
 $emp_id   = trim($_POST['emp_id'] ?? '');
 $emp_name = trim($_POST['emp_name'] ?? '');
@@ -10,7 +11,7 @@ if (empty($emp_id)) {
     exit;
 }
 
-// 1. ������������������
+// 1. เธ•เธฃเธง๏ฟฝ๏ฟฝเธชเธญ๏ฟฝ๏ฟฝเธฃเธซเธฑเธช๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝเธณ
 $sql_check = "SELECT COUNT(*) AS TOTAL FROM EMP_CHECKIN WHERE EMP_ID = :id";
 $stid_check = oci_parse($conn, $sql_check);
 oci_bind_by_name($stid_check, ":id", $emp_id);
@@ -18,15 +19,15 @@ oci_execute($stid_check);
 $row_check = oci_fetch_array($stid_check, OCI_ASSOC);
 
 if ($row_check['TOTAL'] > 0) {
-    // ������������������ ��������������������������
+    // ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝเน€เธ•เธทเธญ๏ฟฝ๏ฟฝเธชเธงเธข๏ฟฝ๏ฟฝ เธง๏ฟฝ๏ฟฝเธฒเน€๏ฟฝ๏ฟฝเธขเธฅ๏ฟฝ๏ฟฝเธ—เธฐเน€๏ฟฝ๏ฟฝเธตเธข๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝเธฅ๏ฟฝ๏ฟฝเธง
     echo "<!DOCTYPE html><html><head>
           <script src='https://cdn.jsdelivr.net/npm/sweetalert2@11'></script>
           <link rel='stylesheet' href='https://fonts.googleapis.com/css2?family=Sarabun&display=swap'>
           <style>body { font-family: 'Sarabun', sans-serif; background: #0f172a; }</style>
           </head><body><script>
             Swal.fire({
-                title: '����������������������!',
-                text: '���������������� $emp_id ��������������������������������',
+                title: 'เธฅ๏ฟฝ๏ฟฝเธ—เธฐเน€๏ฟฝ๏ฟฝเธตเธข๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝเธฅ๏ฟฝ๏ฟฝเธง!',
+                text: 'เธฃเธซเธฑเธช๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝเธฑ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝเธฒ๏ฟฝ๏ฟฝ $emp_id เธกเธต๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝเธญเธกเธนเธฅ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝเธฃเธฐ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝเธฅ๏ฟฝ๏ฟฝเธง๏ฟฝ๏ฟฝเธฃเธฑ๏ฟฝ๏ฟฝ',
                 icon: 'info',
                 timer: 2000,
                 showConfirmButton: false,
@@ -36,7 +37,7 @@ if ($row_check['TOTAL'] > 0) {
     exit;
 }
 
-// 2. �����������������������
+// 2. ๏ฟฝ๏ฟฝเธฑ๏ฟฝ๏ฟฝเธ—เธถ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝเธญเธกเธนเธฅ๏ฟฝ๏ฟฝเธซเธก๏ฟฝ๏ฟฝ
 $sql_ins = "INSERT INTO EMP_CHECKIN (QR_CODE, EMP_ID, EMP_NAME, PLANT, STATUS) VALUES (:id, :id, :name, :plant, 'PENDING')";
 $stid_ins = oci_parse($conn, $sql_ins);
 oci_bind_by_name($stid_ins, ":id", $emp_id);
@@ -44,7 +45,7 @@ oci_bind_by_name($stid_ins, ":name", $emp_name);
 oci_bind_by_name($stid_ins, ":plant", $plant);
 oci_execute($stid_ins, OCI_COMMIT_ON_SUCCESS);
 
-// ������� QR code URL ���������� API �������������� HTTPS
+// เธชเธฃ๏ฟฝ๏ฟฝเธฒ๏ฟฝ๏ฟฝ QR code URL ๏ฟฝ๏ฟฝเธ”เธข๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ API เธ เธฒเธข๏ฟฝ๏ฟฝเธญ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ HTTPS
 $qr_proxied = "https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=" . urlencode($emp_id);
 ?>
 
@@ -54,13 +55,13 @@ $qr_proxied = "https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=" .
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>�������������������� | SAB 40th</title>
+    <title>เธฅ๏ฟฝ๏ฟฝเธ—เธฐเน€๏ฟฝ๏ฟฝเธตเธข๏ฟฝ๏ฟฝเธชเธณเน€เธฃ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ | SAB 40th</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         body {
             background: #0f172a;
-            /* ������������������������������� */
+            /* ๏ฟฝ๏ฟฝเธท๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝเธซเธฅเธฑ๏ฟฝ๏ฟฝเธชเธตเน€๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝเธกเธ”เธน๏ฟฝ๏ฟฝเธฃเธตเน€เธกเธตเธขเธก */
             font-family: 'Kanit', sans-serif;
             min-height: 100vh;
             display: flex;
@@ -144,32 +145,32 @@ $qr_proxied = "https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=" .
             </div>
 
             <div class="info-area">
-                <div class="label">������������������</div>
+                <div class="label">๏ฟฝ๏ฟฝเธท๏ฟฝ๏ฟฝเธญ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝเธฑ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝเธฒ๏ฟฝ๏ฟฝ</div>
                 <div class="value"><?php echo htmlspecialchars($emp_name); ?></div>
 
                 <div class="row">
                     <div class="col-6">
-                        <div class="label">����������������</div>
+                        <div class="label">เธฃเธซเธฑเธช๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝเธฑ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝเธฒ๏ฟฝ๏ฟฝ</div>
                         <div class="value"><?php echo htmlspecialchars($emp_id); ?></div>
                     </div>
                     <div class="col-6 text-end">
-                        <div class="label">���������� (Plant)</div>
+                        <div class="label">๏ฟฝ๏ฟฝเธฃ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝเธฒ๏ฟฝ๏ฟฝ (Plant)</div>
                         <div class="value"><?php echo htmlspecialchars($plant); ?></div>
                     </div>
                 </div>
 
                 <div class="text-center mt-3 py-2 rounded-pill" style="background: #f1f5f9; font-size: 0.75rem;">
-                    <i class="fas fa-check-circle text-success"></i> ��������������������
+                    <i class="fas fa-check-circle text-success"></i> เธฅ๏ฟฝ๏ฟฝเธ—เธฐเน€๏ฟฝ๏ฟฝเธตเธข๏ฟฝ๏ฟฝเธชเธณเน€เธฃ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ
                 </div>
             </div>
         </div>
 
         <div class="mt-4">
             <button onclick="downloadImg()" class="btn btn-primary btn-lg w-100 mb-3 shadow" style="border-radius: 15px; background: #10b981; border:none;">
-                <i class="fas fa-download me-2"></i> ������������������������
+                <i class="fas fa-download me-2"></i> ๏ฟฝ๏ฟฝเธฑ๏ฟฝ๏ฟฝเธ—เธถ๏ฟฝ๏ฟฝเน€๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝเธฃเธน๏ฟฝ๏ฟฝเธ เธฒ๏ฟฝ๏ฟฝ
             </button>
             <a href="index.php" class="btn btn-outline-light w-100 border-0">
-                <i class="fas fa-home me-1"></i> �����������������
+                <i class="fas fa-home me-1"></i> ๏ฟฝ๏ฟฝเธฅเธฑ๏ฟฝ๏ฟฝเธซ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝเธฒเธซเธฅเธฑ๏ฟฝ๏ฟฝ
             </a>
         </div>
     </div>

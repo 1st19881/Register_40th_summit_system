@@ -1,3 +1,4 @@
+<?php require 'auth.php'; ?>
 <!DOCTYPE html>
 <html lang="th">
 
@@ -70,10 +71,13 @@
 <body>
 
     <header class="hero-section text-center">
-        <div class="container">
+        <div class="container position-relative">
+            <a href="logout.php" class="btn btn-outline-light btn-sm" style="position: absolute; top: 10px; right: 15px; border-radius: 50px; padding: 6px 18px; font-size: 0.85rem;">
+                <i class="fas fa-sign-out-alt me-1"></i>ออกจากระบบ
+            </a>
             <img src="logo/logo.png" alt="Summit Auto Body Industry 40th Anniversary" class="hero-logo">
             <h1 class="display-4 fw-bold">ระบบลงทะเบียนเข้างาน</h1>
-            <p class="lead">กรุณาเลือกรายการที่ต้องการดำเนินการ</p>
+            <p class="lead">ยินดีต้อนรับ, <?= htmlspecialchars($_SESSION['user_display_name'] ?? 'ผู้ใช้งาน') ?></p>
         </div>
     </header>
 
@@ -114,6 +118,18 @@
                         </div>
                         <h3 class="fw-bold">เช็คอินเข้างาน</h3>
                         <p class="text-muted text-danger fw-bold">* สำหรับเจ้าหน้าที่เท่านั้น</p>
+                    </div>
+                </a>
+            </div>
+
+            <div class="col-md-4 col-sm-6">
+                <a href="check_table.php" class="btn-portal">
+                    <div class="card menu-card text-center p-4" style="border-top: 5px solid #f59e0b;">
+                        <div class="icon-box" style="color: #f59e0b;">
+                            <i class="fa-solid fa-chair"></i>
+                        </div>
+                        <h3 class="fw-bold">เช็คหมายเลขโต๊ะ</h3>
+                        <p class="text-muted">ตรวจสอบหมายเลขโต๊ะจากรหัสพนักงาน</p>
                     </div>
                 </a>
             </div>

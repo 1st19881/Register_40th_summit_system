@@ -1,4 +1,5 @@
 <?php
+require 'auth.php';
 require 'config/config.php'; // เชื่อมต่อ Oracle
 
 // 1. ดึงยอดรวมเฉพาะคนที่เข้าร่วมงาน (IS_ATTENDED = 'Y')

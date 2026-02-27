@@ -1,4 +1,5 @@
 <?php
+require 'auth.php';
 require 'config/config.php'; // ไฟล์เชื่อมต่อ Oracle
 
 $emp_id = $_GET['emp_id'] ?? '';

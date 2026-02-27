@@ -12,7 +12,7 @@ try {
     }
 
     // 1. ตรวจสอบข้อมูลพนักงานจาก Oracle
-    $sql_check = "SELECT EMP_NAME, STATUS, PLANT, TABLE_CODE FROM EMP_CHECKIN WHERE QR_CODE = :qr";
+    $sql_check = "SELECT EMP_NAME, STATUS, PLANT, TABLE_CODE, TABLE_NO, IS_ATTENDED FROM EMP_CHECKIN WHERE QR_CODE = :qr";
     $stid_check = oci_parse($conn, $sql_check);
     oci_bind_by_name($stid_check, ":qr", $qr);
     oci_execute($stid_check);
@@ -29,6 +29,16 @@ try {
         exit;
     }
 
+    // ตรวจสอบแสดงเลขโต๊ะ: ถ้า IS_ATTENDED=Y แต่ TABLE_CODE และ TABLE_NO ว่าง → แสดง "ผู้บริหาร"
+    $is_attended = ($row['IS_ATTENDED'] ?? 'N');
+    $table_code_val = trim($row['TABLE_CODE'] ?? '');
+    $table_no_val = trim($row['TABLE_NO'] ?? '');
+    if ($is_attended === 'Y' && empty($table_code_val) && empty($table_no_val)) {
+        $display_table = 'ผู้บริหาร';
+    } else {
+        $display_table = !empty($table_code_val) ? $table_code_val : '-';
+    }
+
     // กรณี 2: เช็คอินแล้ว (STATUS = DONE)
     if ($row['STATUS'] === 'DONE') {
         oci_free_statement($stid_check);
@@ -36,7 +46,9 @@ try {
         echo json_encode([
             'status' => 'already',
             'message' => 'เช็คอินแล้ว',
-            'name' => $row['EMP_NAME']
+            'name' => $row['EMP_NAME'],
+            'plant' => $row['PLANT'],
+            'table_code' => $display_table
         ]);
         exit;
     }
@@ -77,7 +89,7 @@ try {
                 'status' => 'success',
                 'name' => $row['EMP_NAME'],
                 'plant' => $row['PLANT'],
-                'table_code' => $row['TABLE_CODE'] ?? '-'
+                'table_code' => $display_table
             ]);
         } else {
             $e = oci_error($stid_employee);

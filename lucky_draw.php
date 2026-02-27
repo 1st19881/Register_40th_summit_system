@@ -307,6 +307,8 @@ if ($action === 'delete_winner' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
         /* Hide all scrollbars */
         html,
@@ -860,6 +862,199 @@ if ($action === 'delete_winner' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                 transform: scale(1.6);
                 opacity: 0;
             }
+        }
+
+        /* Button Logo Styling */
+        .btn-logo {
+            width: 65%;
+            height: auto;
+            object-fit: contain;
+            filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.5)) drop-shadow(0 0 15px rgba(191, 149, 63, 0.4)) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+            transition: all 0.3s ease;
+            z-index: 1;
+        }
+
+        .circle-btn:hover .btn-logo {
+            transform: scale(1.08);
+            filter: drop-shadow(0 0 12px rgba(255, 255, 255, 0.7)) drop-shadow(0 0 25px rgba(191, 149, 63, 0.6)) drop-shadow(0 4px 8px rgba(0, 0, 0, 0.4));
+        }
+
+        .circle-btn:disabled .btn-logo {
+            filter: grayscale(50%) opacity(0.6);
+        }
+
+        /* === DRAWING ANIMATIONS === */
+
+        /* Logo Spin Animation */
+        @keyframes logoSpin {
+            0% {
+                transform: rotate(0deg) scale(1);
+            }
+
+            25% {
+                transform: rotate(90deg) scale(1.1);
+            }
+
+            50% {
+                transform: rotate(180deg) scale(1);
+            }
+
+            75% {
+                transform: rotate(270deg) scale(1.1);
+            }
+
+            100% {
+                transform: rotate(360deg) scale(1);
+            }
+        }
+
+        .btn-logo.spinning {
+            animation: logoSpin 2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+        }
+
+        /* Button Golden Glow Animation */
+        @keyframes goldenGlow {
+
+            0%,
+            100% {
+                box-shadow: 0 0 20px rgba(191, 149, 63, 0.5),
+                    0 0 40px rgba(191, 149, 63, 0.3),
+                    0 0 60px rgba(191, 149, 63, 0.2),
+                    inset 0 0 20px rgba(191, 149, 63, 0.1);
+                border-color: #bf953f;
+            }
+
+            50% {
+                box-shadow: 0 0 40px rgba(252, 246, 186, 0.8),
+                    0 0 80px rgba(191, 149, 63, 0.6),
+                    0 0 120px rgba(191, 149, 63, 0.4),
+                    inset 0 0 40px rgba(252, 246, 186, 0.2);
+                border-color: #fcf6ba;
+            }
+        }
+
+        .circle-btn.drawing {
+            animation: goldenGlow 0.8s ease-in-out infinite;
+            pointer-events: none;
+        }
+
+        /* Multiple Ring Waves */
+        @keyframes ringWave1 {
+            0% {
+                transform: scale(1);
+                opacity: 0.8;
+                border-width: 4px;
+            }
+
+            100% {
+                transform: scale(2);
+                opacity: 0;
+                border-width: 1px;
+            }
+        }
+
+        @keyframes ringWave2 {
+            0% {
+                transform: scale(1);
+                opacity: 0.6;
+                border-width: 3px;
+            }
+
+            100% {
+                transform: scale(2.5);
+                opacity: 0;
+                border-width: 1px;
+            }
+        }
+
+        @keyframes ringWave3 {
+            0% {
+                transform: scale(1);
+                opacity: 0.4;
+                border-width: 2px;
+            }
+
+            100% {
+                transform: scale(3);
+                opacity: 0;
+                border-width: 1px;
+            }
+        }
+
+        .ring-wave {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            border: 4px solid #bf953f;
+            pointer-events: none;
+        }
+
+        .ring-wave-1 {
+            animation: ringWave1 1.5s ease-out infinite;
+        }
+
+        .ring-wave-2 {
+            animation: ringWave2 1.5s ease-out infinite 0.3s;
+        }
+
+        .ring-wave-3 {
+            animation: ringWave3 1.5s ease-out infinite 0.6s;
+        }
+
+        /* Particle Container */
+        .particles-container {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            overflow: visible;
+        }
+
+        @keyframes particleFloat {
+            0% {
+                transform: translate(0, 0) scale(0);
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 1;
+            }
+
+            100% {
+                transform: translate(var(--tx), var(--ty)) scale(1);
+                opacity: 0;
+            }
+        }
+
+        .particle {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background: linear-gradient(135deg, #bf953f, #fcf6ba);
+            border-radius: 50%;
+            top: 50%;
+            left: 50%;
+            animation: particleFloat 1.5s ease-out infinite;
+        }
+
+        /* Button Press Effect */
+        @keyframes buttonPress {
+            0% {
+                transform: scale(0.85);
+            }
+
+            50% {
+                transform: scale(0.75);
+            }
+
+            100% {
+                transform: scale(0.85);
+            }
+        }
+
+        .circle-btn.pressed {
+            animation: buttonPress 0.3s ease-out;
         }
 
         .prize-tag {
@@ -1513,10 +1708,105 @@ if ($action === 'delete_winner' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             font-weight: bold;
             backdrop-filter: blur(10px);
         }
+
+        /* ===== Floating Gold Star Particles ===== */
+        .bg-scene {
+            position: fixed;
+            inset: 0;
+            background:
+                radial-gradient(ellipse at 30% 20%, rgba(191, 149, 63, 0.10) 0%, transparent 50%),
+                radial-gradient(ellipse at 70% 80%, rgba(191, 149, 63, 0.06) 0%, transparent 50%),
+                radial-gradient(ellipse at 50% 50%, rgba(10, 10, 15, 0.9) 0%, transparent 80%),
+                linear-gradient(175deg, #0a0a0f 0%, #1a1a2e 40%, #0d1526 100%);
+            z-index: -3;
+            pointer-events: none;
+        }
+
+        .star-particles {
+            position: fixed;
+            inset: 0;
+            z-index: 1;
+            pointer-events: none;
+            overflow: hidden;
+        }
+
+        .star-particle {
+            position: absolute;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(252, 246, 186, 0.9), rgba(191, 149, 63, 0.4));
+            animation: starFloat linear infinite;
+        }
+
+        @keyframes starFloat {
+            0% {
+                transform: translateY(100vh) scale(0);
+                opacity: 0;
+            }
+
+            10% {
+                opacity: 1;
+            }
+
+            90% {
+                opacity: 0.8;
+            }
+
+            100% {
+                transform: translateY(-10vh) scale(1);
+                opacity: 0;
+            }
+        }
+
+        /* Decorative gold lines */
+        .deco-line {
+            position: fixed;
+            background: linear-gradient(90deg, transparent, rgba(191, 149, 63, 0.12), transparent);
+            height: 1px;
+            width: 100%;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        .deco-line-1 {
+            top: 15%;
+            animation: decoShift 12s ease-in-out infinite;
+        }
+
+        .deco-line-2 {
+            top: 85%;
+            animation: decoShift 12s ease-in-out infinite reverse;
+        }
+
+        .deco-line-3 {
+            top: 50%;
+            animation: decoShift 18s ease-in-out infinite;
+            opacity: 0.5;
+        }
+
+        @keyframes decoShift {
+
+            0%,
+            100% {
+                transform: translateX(-20%);
+                opacity: 0.3;
+            }
+
+            50% {
+                transform: translateX(20%);
+                opacity: 0.8;
+            }
+        }
     </style>
 </head>
 
 <body class="flex flex-col items-center">
+
+    <!-- Starfield Background Effect -->
+    <div class="bg-scene"></div>
+    <div class="deco-line deco-line-1"></div>
+    <div class="deco-line deco-line-2"></div>
+    <div class="deco-line deco-line-3"></div>
+    <div class="star-particles" id="starParticles"></div>
 
     <!-- Logo Watermark Background -->
     <img src="logo/logo.png" alt="" class="logo-watermark">
@@ -1546,7 +1836,7 @@ if ($action === 'delete_winner' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div class="relative flex flex-col items-center gap-6 md:gap-8 mt-4 md:mt-6 z-10">
                     <button onclick="startDrawing()" id="drawBtn" class="circle-btn" style="transform: scale(0.85);">
                         <div id="pulseEffect" class="pulse-ring"></div>
-                        <span id="btnText" class="font-extrabold tracking-widest text-sm md:text-lg text-white">RANDOM</span>
+                        <img src="logo/logo.png" class="btn-logo" alt="Logo">
                     </button>
                 </div>
             </div>
@@ -1622,7 +1912,7 @@ if ($action === 'delete_winner' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             <div class="hof-header">
                 <h3 class="hof-title">
                     <span class="hof-title-icon">🏆</span>
-                    Hall of Fame
+                    Hall of Frame
                     <span id="winnerCount" class="text-base font-normal bg-[#bf953f]/30 px-4 py-2 rounded-full text-white">0 ผู้โชคดี</span>
                 </h3>
                 <button class="hof-close" onclick="closeHofModal()">✕</button>
@@ -2103,13 +2393,34 @@ if ($action === 'delete_winner' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         async function startDrawing() {
             if (isDrawing) return;
             const prize = prizeSelect.value;
-            if (!prize) return alert("กรุณาเลือกรางวัล");
+            if (!prize) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'ยังไม่ได้เลือกรางวัล',
+                    text: 'กรุณาเลือกรางวัลก่อนทำการสุ่ม',
+                    confirmButtonText: 'ตกลง',
+                    confirmButtonColor: '#bf953f',
+                    background: '#1a1a2e',
+                    color: '#ffffff',
+                    iconColor: '#f0c040'
+                });
+                return;
+            }
 
             // Check quantity before drawing
             const selectedOption = prizeSelect.options[prizeSelect.selectedIndex];
             const qty = parseInt(selectedOption.dataset.qty) || 0;
             if (qty <= 0) {
-                alert("รางวัลนี้หมดแล้ว กรุณาเลือกรางวัลอื่น");
+                Swal.fire({
+                    icon: 'error',
+                    title: 'รางวัลหมดแล้ว!',
+                    text: 'รางวัลนี้หมดแล้ว กรุณาเลือกรางวัลอื่น',
+                    confirmButtonText: 'ตกลง',
+                    confirmButtonColor: '#bf953f',
+                    background: '#1a1a2e',
+                    color: '#ffffff',
+                    iconColor: '#e74c3c'
+                });
                 return;
             }
 
@@ -2130,7 +2441,16 @@ if ($action === 'delete_winner' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             const data = await res.json();
 
             if (!data.success) {
-                alert(data.message);
+                Swal.fire({
+                    icon: 'info',
+                    title: 'ไม่สามารถสุ่มได้',
+                    text: data.message,
+                    confirmButtonText: 'ตกลง',
+                    confirmButtonColor: '#bf953f',
+                    background: '#1a1a2e',
+                    color: '#ffffff',
+                    iconColor: '#3498db'
+                });
                 isDrawing = false;
                 drawBtn.disabled = false;
                 return;
@@ -2153,6 +2473,27 @@ if ($action === 'delete_winner' && $_SERVER['REQUEST_METHOD'] === 'POST') {
 
             // ?? Play Arcade sound
             playArcade(2000);
+
+            // === ADD DRAWING ANIMATIONS ===
+            // Button press effect
+            drawBtn.classList.add('pressed');
+            setTimeout(() => drawBtn.classList.remove('pressed'), 300);
+
+            // Add drawing class for golden glow
+            drawBtn.classList.add('drawing');
+
+            // Add logo spinning
+            const btnLogo = drawBtn.querySelector('.btn-logo');
+            if (btnLogo) btnLogo.classList.add('spinning');
+
+            // Add ring waves
+            const ringWaves = [];
+            for (let i = 1; i <= 3; i++) {
+                const ring = document.createElement('div');
+                ring.className = `ring-wave ring-wave-${i}`;
+                drawBtn.appendChild(ring);
+                ringWaves.push(ring);
+            }
 
             // Add shaking class to all char boxes
             charElements.forEach(el => {
@@ -2185,6 +2526,13 @@ if ($action === 'delete_winner' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                 el.classList.remove('char-shaking');
             });
             drawBtn.classList.remove('shaking');
+
+            // === REMOVE DRAWING ANIMATIONS ===
+            drawBtn.classList.remove('drawing');
+            if (btnLogo) btnLogo.classList.remove('spinning');
+
+            // Remove ring waves
+            ringWaves.forEach(ring => ring.remove());
 
             winnerNameDisplay.innerHTML = `<p class="text-[#ffff] text-lg md:text-xl font-bold">🎉 เปิดรางวัล!</p>`;
             playSuspense(); // ?? Play suspense sound
@@ -2248,14 +2596,48 @@ if ($action === 'delete_winner' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                 const data = await res.json();
 
                 if (data.success) {
+                    // Show success toast
+                    const Toast = Swal.mixin({
+                        toast: true,
+                        position: 'top-end',
+                        showConfirmButton: false,
+                        timer: 2500,
+                        timerProgressBar: true,
+                        background: '#1a1a2e',
+                        color: '#ffffff',
+                        didOpen: (toast) => {
+                            toast.onmouseenter = Swal.stopTimer;
+                            toast.onmouseleave = Swal.resumeTimer;
+                        }
+                    });
+                    Toast.fire({
+                        icon: 'success',
+                        title: `ลบ ${empName} สำเร็จ`
+                    });
                     // Refresh data ทันที
                     await fetchData();
                 } else {
-                    alert('เกิดข้อผิดพลาด: ' + data.message);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'เกิดข้อผิดพลาด',
+                        text: data.message,
+                        confirmButtonText: 'ตกลง',
+                        confirmButtonColor: '#bf953f',
+                        background: '#1a1a2e',
+                        color: '#ffffff'
+                    });
                 }
             } catch (err) {
                 console.error('Error deleting winner:', err);
-                alert('เกิดข้อผิดพลาด: ' + err.message);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'เกิดข้อผิดพลาด',
+                    text: err.message,
+                    confirmButtonText: 'ตกลง',
+                    confirmButtonColor: '#bf953f',
+                    background: '#1a1a2e',
+                    color: '#ffffff'
+                });
             }
         }
 
@@ -2336,13 +2718,51 @@ if ($action === 'delete_winner' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
-        // Update escape key handler to close both modals
+        // Keyboard shortcuts handler
         document.addEventListener('keydown', function(e) {
+            // Escape: close modals
             if (e.key === 'Escape') {
                 closeSetupModal();
                 closeHofModal();
             }
+
+            // Spacebar or Enter: start lucky draw
+            if (e.key === ' ' || e.key === 'Enter') {
+                // Don't trigger if a modal is open
+                const setupModalOpen = document.getElementById('setupModal').classList.contains('active');
+                const hofModalOpen = document.getElementById('hofModal').classList.contains('active');
+                // Don't trigger if SweetAlert is showing
+                const swalOpen = document.querySelector('.swal2-container');
+
+                if (setupModalOpen || hofModalOpen || swalOpen) return;
+
+                e.preventDefault(); // Prevent page scroll on spacebar
+                startDrawing();
+            }
         });
+    </script>
+
+    <!-- Star Particles Initialization -->
+    <script>
+        (function initStarParticles() {
+            const container = document.getElementById('starParticles');
+            if (!container) return;
+            const count = 40;
+            for (let i = 0; i < count; i++) {
+                const p = document.createElement('div');
+                p.className = 'star-particle';
+                const size = (Math.random() * 3 + 1.5);
+                p.style.left = Math.random() * 100 + '%';
+                p.style.width = size + 'px';
+                p.style.height = size + 'px';
+                p.style.animationDuration = (Math.random() * 14 + 8) + 's';
+                p.style.animationDelay = (Math.random() * 12) + 's';
+                if (size > 3) {
+                    p.style.boxShadow = '0 0 6px rgba(252, 246, 186, 0.6)';
+                }
+                container.appendChild(p);
+            }
+        })();
     </script>
 </body>
 

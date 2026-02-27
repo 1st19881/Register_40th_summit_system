@@ -5,8 +5,8 @@
  * Summit Auto Body Industry - 40th Anniversary
  */
 
-// Start session for PRG pattern (Post-Redirect-Get) to prevent form resubmission
-session_start();
+// Auth check (includes session_start)
+require 'auth.php';
 
 // Include SimpleXLSX library for Excel reading
 require_once 'lib/SimpleXLSX.php';
@@ -45,7 +45,7 @@ function flashRedirect($msg, $type)
 }
 
 // Function to insert or update employee data (upsert)
-function upsertEmployee($conn, $qr_code, $emp_id, $emp_name, $plant, $status, $is_attended = 'N', $table_code = '')
+function upsertEmployee($conn, $qr_code, $emp_id, $emp_name, $plant, $status, $is_attended = 'N', $table_code = '', $table_no = '')
 {
     // Check if already exists
     $check_sql = "SELECT COUNT(*) AS CNT FROM EMP_CHECKIN WHERE EMP_ID = :emp_id";
@@ -57,7 +57,7 @@ function upsertEmployee($conn, $qr_code, $emp_id, $emp_name, $plant, $status, $i
 
     if ($row['CNT'] == 0) {
         // INSERT new record
-        $insert_sql = "INSERT INTO EMP_CHECKIN (QR_CODE, EMP_ID, EMP_NAME, PLANT, STATUS, IS_ATTENDED, TABLE_CODE) VALUES (:qr_code, :emp_id, :emp_name, :plant, :status, :is_attended, :table_code)";
+        $insert_sql = "INSERT INTO EMP_CHECKIN (QR_CODE, EMP_ID, EMP_NAME, PLANT, STATUS, IS_ATTENDED, TABLE_CODE, TABLE_NO) VALUES (:qr_code, :emp_id, :emp_name, :plant, :status, :is_attended, :table_code, :table_no)";
         $insert_stid = oci_parse($conn, $insert_sql);
         oci_bind_by_name($insert_stid, ":qr_code", $qr_code);
         oci_bind_by_name($insert_stid, ":emp_id", $emp_id);
@@ -66,6 +66,7 @@ function upsertEmployee($conn, $qr_code, $emp_id, $emp_name, $plant, $status, $i
         oci_bind_by_name($insert_stid, ":status", $status);
         oci_bind_by_name($insert_stid, ":is_attended", $is_attended);
         oci_bind_by_name($insert_stid, ":table_code", $table_code);
+        oci_bind_by_name($insert_stid, ":table_no", $table_no);
 
         if (oci_execute($insert_stid, OCI_DEFAULT)) {
             oci_free_statement($insert_stid);
@@ -76,7 +77,7 @@ function upsertEmployee($conn, $qr_code, $emp_id, $emp_name, $plant, $status, $i
         }
     } else {
         // UPDATE existing record
-        $update_sql = "UPDATE EMP_CHECKIN SET QR_CODE = :qr_code, EMP_NAME = :emp_name, PLANT = :plant, STATUS = :status, IS_ATTENDED = :is_attended, TABLE_CODE = :table_code WHERE EMP_ID = :emp_id";
+        $update_sql = "UPDATE EMP_CHECKIN SET QR_CODE = :qr_code, EMP_NAME = :emp_name, PLANT = :plant, STATUS = :status, IS_ATTENDED = :is_attended, TABLE_CODE = :table_code, TABLE_NO = :table_no WHERE EMP_ID = :emp_id";
         $update_stid = oci_parse($conn, $update_sql);
         oci_bind_by_name($update_stid, ":qr_code", $qr_code);
         oci_bind_by_name($update_stid, ":emp_id", $emp_id);
@@ -85,6 +86,7 @@ function upsertEmployee($conn, $qr_code, $emp_id, $emp_name, $plant, $status, $i
         oci_bind_by_name($update_stid, ":status", $status);
         oci_bind_by_name($update_stid, ":is_attended", $is_attended);
         oci_bind_by_name($update_stid, ":table_code", $table_code);
+        oci_bind_by_name($update_stid, ":table_no", $table_no);
 
         if (oci_execute($update_stid, OCI_DEFAULT)) {
             oci_free_statement($update_stid);
@@ -96,7 +98,7 @@ function upsertEmployee($conn, $qr_code, $emp_id, $emp_name, $plant, $status, $i
     }
 }
 
-// --- Handle File Upload ---
+// --- Handle File Upload (Employee Data) ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['excel_file'])) {
     $file = $_FILES['excel_file'];
     $allowedExtensions = ['csv', 'xlsx'];
@@ -162,9 +164,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['excel_file'])) {
                         $status = isset($data[4]) && !empty(trim($data[4])) ? trim($data[4]) : 'PENDING';
                         $is_attended = isset($data[5]) && !empty(trim($data[5])) ? strtoupper(trim($data[5])) : 'N';
                         $table_code = isset($data[6]) && !empty(trim($data[6])) ? trim($data[6]) : '';
+                        $table_no = isset($data[7]) && !empty(trim($data[7])) ? trim($data[7]) : '';
 
                         if (!empty($qr_code) && !empty($emp_id)) {
-                            $result = upsertEmployee($conn, $qr_code, $emp_id, $emp_name, $plant, $status, $is_attended, $table_code);
+                            $result = upsertEmployee($conn, $qr_code, $emp_id, $emp_name, $plant, $status, $is_attended, $table_code, $table_no);
                             if ($result['success']) {
                                 if ($result['action'] === 'insert') {
                                     $insertCount++;
@@ -383,13 +386,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['transfer_to_lucky_dra
 
 // --- Fetch Current Data ---
 $employees = [];
+$attendedYCount = 0;
+$attendedNCount = 0;
 $conn = get_db_connection();
 if ($conn) {
-    $sql = "SELECT QR_CODE, EMP_ID, EMP_NAME, PLANT, STATUS, IS_ATTENDED, TABLE_CODE FROM EMP_CHECKIN ORDER BY EMP_ID ASC";
+    $sql = "SELECT QR_CODE, EMP_ID, EMP_NAME, PLANT, STATUS, IS_ATTENDED, TABLE_CODE, TABLE_NO FROM EMP_CHECKIN ORDER BY EMP_ID ASC";
     $stid = oci_parse($conn, $sql);
     oci_execute($stid);
     while ($row = oci_fetch_array($stid, OCI_ASSOC)) {
         $employees[] = $row;
+        // Count IS_ATTENDED status
+        if (($row['IS_ATTENDED'] ?? 'N') === 'Y') {
+            $attendedYCount++;
+        } else {
+            $attendedNCount++;
+        }
     }
     oci_free_statement($stid);
     oci_close($conn);
@@ -541,6 +552,7 @@ if ($conn) {
                             <li><strong>STATUS</strong> - สถานะ (ไม่บังคับ, default: PENDING)</li>
                             <li><strong>IS_ATTENDED</strong> - เข้าร่วมงาน Y/N (ไม่บังคับ, default: N)</li>
                             <li><strong>TABLE_CODE</strong> - รหัสโต๊ะ (ไม่บังคับ)</li>
+                            <li><strong>TABLE_NO</strong> - หมายเลขโต๊ะ (ไม่บังคับ)</li>
                         </ul>
                         <a href="template/employee_template.csv" download class="btn btn-outline-success btn-sm w-100">
                             <i class="fas fa-download me-2"></i>ดาวน์โหลด Template
@@ -599,6 +611,37 @@ if ($conn) {
 
             <!-- Data Table Section -->
             <div class="col-lg-8">
+                <!-- IS_ATTENDED Statistics -->
+                <div class="row g-3 mb-4">
+                    <div class="col-md-4">
+                        <div class="card border-0 shadow-sm" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                            <div class="card-body text-white text-center py-3">
+                                <i class="fas fa-users fa-2x mb-2"></i>
+                                <h3 class="fw-bold mb-0"><?= count($employees) ?></h3>
+                                <small>พนักงานทั้งหมด</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card border-0 shadow-sm" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);">
+                            <div class="card-body text-white text-center py-3">
+                                <i class="fas fa-check-circle fa-2x mb-2"></i>
+                                <h3 class="fw-bold mb-0"><?= $attendedYCount ?></h3>
+                                <small>เข้าร่วมงาน (Y)</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card border-0 shadow-sm" style="background: linear-gradient(135deg, #eb3349 0%, #f45c43 100%);">
+                            <div class="card-body text-white text-center py-3">
+                                <i class="fas fa-times-circle fa-2x mb-2"></i>
+                                <h3 class="fw-bold mb-0"><?= $attendedNCount ?></h3>
+                                <small>ไม่เข้าร่วมงาน (N)</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="card table-card">
                     <div class="card-body p-4">
                         <div class="d-flex justify-content-between align-items-center mb-4">
@@ -618,6 +661,7 @@ if ($conn) {
                                         <th>STATUS</th>
                                         <th>IS_ATTENDED</th>
                                         <th>TABLE_CODE</th>
+                                        <th>TABLE_NO</th>
                                         <th>จัดการ</th>
                                     </tr>
                                 </thead>
@@ -640,6 +684,7 @@ if ($conn) {
                                                 </span>
                                             </td>
                                             <td><?= htmlspecialchars($emp['TABLE_CODE'] ?? '') ?></td>
+                                            <td><span class="badge bg-info"><?= htmlspecialchars($emp['TABLE_NO'] ?? '') ?></span></td>
                                             <td>
                                                 <form method="POST" style="display:inline;" onsubmit="return confirm('ต้องการลบข้อมูลพนักงานนี้หรือไม่?');">
                                                     <input type="hidden" name="delete_emp_id" value="<?= htmlspecialchars($emp['EMP_ID']) ?>">

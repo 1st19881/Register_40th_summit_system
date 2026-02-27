@@ -5,6 +5,7 @@
  * จัดการของรางวัลสำหรับการจับรางวัล
  */
 
+require 'auth.php';
 require_once 'config/config.php';
 
 // Handle AJAX Actions

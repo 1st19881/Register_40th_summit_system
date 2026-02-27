@@ -284,23 +284,37 @@
             gap: 0.6rem;
             width: 100%;
             padding: 0.9rem 1.5rem;
-            background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
-            color: white;
-            border: none;
+
+            /* Gold/Luxurious Theme Pattern */
+            background: rgba(191, 149, 63, 0.15);
+            /* #bf953f with opacity */
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+
+            /* Prominent Gold Border */
+            border: 2px solid rgba(252, 246, 186, 0.5);
+            /* Pale Gold */
+
+            color: #ffffff;
             border-radius: 14px;
             font-family: 'Kanit', sans-serif;
-            font-size: 1.05rem;
+            font-size: 1.1rem;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 8px 25px rgba(139, 92, 246, 0.4);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 5px 15px rgba(191, 149, 63, 0.25);
             margin-bottom: 0.75rem;
+            letter-spacing: 0.5px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
         }
 
         .checkin-btn:hover {
             transform: translateY(-2px);
-            box-shadow: 0 12px 35px rgba(139, 92, 246, 0.5);
-            background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%);
+            background: rgba(191, 149, 63, 0.3);
+            border-color: #fcf6ba;
+            /* Bright Gold */
+            box-shadow: 0 0 25px rgba(191, 149, 63, 0.5), inset 0 0 20px rgba(191, 149, 63, 0.2);
+            text-shadow: 0 0 10px rgba(252, 246, 186, 0.6);
         }
 
         .checkin-btn:active {
@@ -343,6 +357,42 @@
 
         .home-btn:active {
             transform: translateY(0);
+        }
+
+        /* Check Table Button */
+        .check-table-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            width: 100%;
+            padding: 0.8rem 1.25rem;
+            background: rgba(191, 149, 63, 0.1);
+            color: rgba(252, 246, 186, 0.9);
+            border: 1px solid rgba(191, 149, 63, 0.4);
+            border-radius: 14px;
+            font-family: 'Kanit', sans-serif;
+            font-size: 0.95rem;
+            font-weight: 500;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            margin-bottom: 0.5rem;
+        }
+
+        .check-table-btn:hover {
+            background: rgba(191, 149, 63, 0.2);
+            color: #fcf6ba;
+            border-color: rgba(252, 246, 186, 0.6);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(191, 149, 63, 0.2);
+        }
+
+        .check-table-btn:active {
+            transform: translateY(0);
+        }
+
+        .check-table-btn i {
+            color: #bf953f;
         }
 
         /* Status indicator */
@@ -415,6 +465,69 @@
             background-color: #003399 !important;
         }
 
+        /* Custom SweetAlert Button */
+        .swal-btn-custom {
+            background: linear-gradient(135deg, #bf953f 0%, #9c7b36 100%) !important;
+            color: white !important;
+            border: none !important;
+            border-radius: 50px !important;
+            padding: 12px 40px !important;
+            font-family: 'Kanit', sans-serif !important;
+            font-size: 1.15rem !important;
+            font-weight: 500 !important;
+            box-shadow: 0 10px 20px rgba(191, 149, 63, 0.3) !important;
+            transition: all 0.3s ease !important;
+            outline: none !important;
+        }
+
+        .swal-btn-custom:hover {
+            transform: translateY(-2px) !important;
+            box-shadow: 0 15px 30px rgba(191, 149, 63, 0.4) !important;
+            filter: brightness(1.1) !important;
+        }
+
+        .swal-btn-custom:active {
+            transform: translateY(1px) !important;
+            box-shadow: 0 5px 10px rgba(191, 149, 63, 0.2) !important;
+        }
+
+        /* SweetAlert Responsive Text Classes */
+        .swal-text-name {
+            font-size: 2rem;
+            color: #1e293b;
+            font-weight: 700;
+            line-height: 1.2;
+            letter-spacing: -0.5px;
+        }
+
+        .swal-text-plant {
+            font-size: 1.2rem;
+            color: #64748b;
+            font-weight: 500;
+        }
+
+        .swal-text-table-label {
+            color: #92400e;
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .swal-text-table-number {
+            color: #b45309;
+            font-size: 3.5rem;
+            font-weight: 800;
+            line-height: 1;
+            margin-top: 10px;
+            text-shadow: 2px 2px 0px rgba(255, 255, 255, 0.5);
+        }
+
+        .swal-text-footer {
+            margin-top: 15px;
+            font-size: 0.95rem;
+            color: #94a3b8;
+            font-style: italic;
+        }
+
         /* Responsive */
         @media (max-width: 400px) {
             .checkin-card {
@@ -424,6 +537,31 @@
 
             .emp-input {
                 padding: 0.875rem 0.875rem 0.875rem 3rem;
+            }
+
+            /* SweetAlert Mobile Adjustments */
+            .swal-text-name {
+                font-size: 1.5rem !important;
+            }
+
+            .swal-text-plant {
+                font-size: 1rem !important;
+            }
+
+            .swal-text-table-label {
+                font-size: 0.95rem !important;
+            }
+
+            .swal-text-table-number {
+                font-size: 2.5rem !important;
+            }
+
+            .swal-footer-text {
+                font-size: 0.8rem !important;
+            }
+
+            .swal2-popup {
+                padding: 1.5rem !important;
             }
         }
 
@@ -483,7 +621,12 @@
                 <span>เช็คอินเข้างาน</span>
             </button>
 
-            <a href="index.php" class="home-btn">
+            <a href="check_table.php" class="check-table-btn">
+                <i class="fas fa-hashtag"></i>
+                <span>เช็คหมายเลขโต๊ะที่นั่ง</span>
+            </a>
+
+            <a href="index.php" class="home-btn" style="display: none;">
                 <i class="fas fa-home"></i>
                 <span>กลับหน้าหลัก</span>
             </a>
@@ -567,26 +710,79 @@
                     if (data.status === 'success') {
                         Swal.fire({
                             icon: 'success',
-                            title: '✅ เช็คอินสำเร็จ!',
-                            html: `<div style="font-size: 1.2rem; color: #003399; font-weight: 600;"><b>${data.name}</b></div>
-                                   <div style="color: #666; margin-top: 10px; font-size: 1rem;">โรงงาน: ${data.plant}</div>
-                                   <div style="color: #bf953f; margin-top: 15px; font-size: 1.3rem; font-weight: 700;">🪑 โต๊ะ: ${data.table_code || '-'}</div>`,
+                            title: '<span style="color: #059669; font-size: 1.8rem;">✅ เช็คอินสำเร็จ!</span>',
+                            html: `
+                                <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; padding-top: 10px;">
+                                    <div class="swal-text-name">
+                                        ${data.name}
+                                    </div>
+                                    <div class="swal-text-plant">
+                                        🏭 โรงงาน: <span style="color: #0f172a; font-weight: 600;">${data.plant}</span>
+                                    </div>
+                                    
+                                    <div style="margin-top: 20px; background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%); 
+                                                padding: 20px; border-radius: 20px; border: 2px solid #fcd34d; width: 100%;
+                                                box-shadow: 0 10px 25px -5px rgba(217, 119, 6, 0.15);">
+                                        <div class="swal-text-table-label">📍 หมายเลขโต๊ะของคุณ</div>
+                                        <div class="swal-text-table-number">
+                                            ${data.table_code || '-'}
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="swal-text-footer">
+                                        📸 กรุณาแคปหน้าจอไว้เพื่อยืนยันการเข้าร่วมงาน
+                                    </div>
+                                </div>
+                            `,
                             showConfirmButton: true,
-                            confirmButtonText: 'ปิด',
-                            confirmButtonColor: '#8b5cf6',
-                            background: '#fff',
+                            confirmButtonText: 'ปิดหน้าต่าง',
+                            background: '#ffffff',
+                            width: '450px',
+                            padding: '2rem',
                             customClass: {
-                                popup: 'animated-popup'
+                                popup: 'animated-popup',
+                                title: 'swal-title-custom',
+                                confirmButton: 'swal-btn-custom'
                             }
                         });
                         empInput.value = '';
                     } else if (data.status === 'already') {
                         Swal.fire({
-                            icon: 'info',
-                            title: 'เช็คอินแล้ว',
-                            html: `<div style="color: #666;">คุณ <b>${data.name}</b><br>ได้ลงทะเบียนเข้างานแล้ว</div>`,
-                            timer: 500,
-                            showConfirmButton: false
+                            icon: 'success',
+                            title: '<span style="color: #059669; font-size: 1.8rem;">✅ เช็คอินสำเร็จ!</span>',
+                            html: `
+                                <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; padding-top: 10px;">
+                                    <div class="swal-text-name">
+                                        ${data.name}
+                                    </div>
+                                    <div class="swal-text-plant">
+                                        🏭 โรงงาน: <span style="color: #0f172a; font-weight: 600;">${data.plant}</span>
+                                    </div>
+                                    
+                                    <div style="margin-top: 20px; background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%); 
+                                                padding: 20px; border-radius: 20px; border: 2px solid #fcd34d; width: 100%;
+                                                box-shadow: 0 10px 25px -5px rgba(217, 119, 6, 0.15);">
+                                        <div class="swal-text-table-label">📍 หมายเลขโต๊ะของคุณ</div>
+                                        <div class="swal-text-table-number">
+                                            ${data.table_code || '-'}
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="swal-text-footer">
+                                        📸 กรุณาแคปหน้าจอไว้เพื่อยืนยันการเข้าร่วมงาน
+                                    </div>
+                                </div>
+                            `,
+                            showConfirmButton: true,
+                            confirmButtonText: 'ปิดหน้าต่าง',
+                            background: '#ffffff',
+                            width: '450px',
+                            padding: '2rem',
+                            customClass: {
+                                popup: 'animated-popup',
+                                title: 'swal-title-custom',
+                                confirmButton: 'swal-btn-custom'
+                            }
                         });
                         empInput.value = ''; // ล้างค่าเพื่อพิมพ์รหัสถัดไป
                     } else {
