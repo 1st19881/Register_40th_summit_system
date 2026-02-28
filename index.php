@@ -181,6 +181,18 @@
                 </a>
             </div>
 
+            <div class="col-md-4 col-sm-6">
+                <a href="remote_control.php" class="btn-portal">
+                    <div class="card menu-card text-center p-4" style="border-top: 5px solid #003399;">
+                        <div class="icon-box" style="color: #003399;">
+                            <i class="fas fa-gamepad"></i>
+                        </div>
+                        <h3 class="fw-bold">Remote Control</h3>
+                        <p class="text-muted">ควบคุมการหมุนรางวัลจากอุปกรณ์อื่น</p>
+                    </div>
+                </a>
+            </div>
+
         </div>
 
         <footer class="mt-5 text-center text-muted">

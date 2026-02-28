@@ -295,6 +295,178 @@ if ($action === 'delete_winner' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     exit;
 }
+
+// === REMOTE CONTROL APIs ===
+
+// ล้าง command ค้าง (เรียกจาก Remote Control)
+if ($action === 'clear_commands' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    header('Content-Type: application/json');
+    $conn = get_db_connection();
+
+    try {
+        $clear_query = "UPDATE draw_commands SET status = 'EXPIRED' WHERE status IN ('PENDING', 'PROCESSING')";
+        $clr_stid = oci_parse($conn, $clear_query);
+        oci_execute($clr_stid, OCI_COMMIT_ON_SUCCESS);
+        $affected = oci_num_rows($clr_stid);
+        oci_free_statement($clr_stid);
+        oci_close($conn);
+        echo json_encode(['success' => true, 'cleared' => $affected]);
+    } catch (Exception $e) {
+        if (isset($conn)) oci_close($conn);
+        echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+    }
+    exit;
+}
+
+// Remote กดหมุน → INSERT command เข้า DB
+if ($action === 'remote_spin' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    header('Content-Type: application/json');
+    $conn = get_db_connection();
+
+    try {
+        $input = json_decode(file_get_contents('php://input'), true);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            throw new Exception('Invalid JSON input');
+        }
+        if (empty($input['prize'])) {
+            throw new Exception('Prize name is required');
+        }
+        $prize_name = trim($input['prize']);
+
+        // Auto-expire: command ที่ค้างเกิน 60 วินาที → เปลี่ยนเป็น EXPIRED อัตโนมัติ
+        $expire_query = "UPDATE draw_commands SET status = 'EXPIRED' WHERE status IN ('PENDING', 'PROCESSING') AND created_at < SYSDATE - INTERVAL '60' SECOND";
+        $exp_stid = oci_parse($conn, $expire_query);
+        oci_execute($exp_stid, OCI_COMMIT_ON_SUCCESS);
+        oci_free_statement($exp_stid);
+
+        // ตรวจสอบว่ามี command PENDING หรือ PROCESSING ค้างอยู่ไหม (ที่ยังไม่หมดอายุ)
+        $check_query = "SELECT COUNT(*) AS cnt FROM draw_commands WHERE status IN ('PENDING', 'PROCESSING')";
+        $chk_stid = oci_parse($conn, $check_query);
+        oci_execute($chk_stid);
+        $chk_row = oci_fetch_array($chk_stid, OCI_ASSOC);
+        oci_free_statement($chk_stid);
+
+        if ((int)$chk_row['CNT'] > 0) {
+            throw new Exception('มีคำสั่งหมุนที่กำลังประมวลผลอยู่ กรุณารอสักครู่');
+        }
+
+        // INSERT command ใหม่
+        $ins_query = "INSERT INTO draw_commands (cmd_id, cmd_type, prize_name, status, created_at) VALUES (draw_cmd_seq.NEXTVAL, 'SPIN', :prize, 'PENDING', SYSDATE)";
+        $ins_stid = oci_parse($conn, $ins_query);
+        oci_bind_by_name($ins_stid, ":prize", $prize_name);
+        if (!oci_execute($ins_stid, OCI_COMMIT_ON_SUCCESS)) {
+            throw new Exception('Failed to insert draw command');
+        }
+        oci_free_statement($ins_stid);
+
+        // ดึง cmd_id ล่าสุดที่เพิ่ง insert
+        $last_id_query = "SELECT draw_cmd_seq.CURRVAL AS last_id FROM dual";
+        $lid_stid = oci_parse($conn, $last_id_query);
+        oci_execute($lid_stid);
+        $lid_row = oci_fetch_array($lid_stid, OCI_ASSOC);
+        $cmd_id = $lid_row['LAST_ID'];
+        oci_free_statement($lid_stid);
+
+        oci_close($conn);
+        echo json_encode(['success' => true, 'message' => 'ส่งคำสั่งหมุนสำเร็จ', 'cmd_id' => $cmd_id]);
+    } catch (Exception $e) {
+        if (isset($conn)) oci_close($conn);
+        echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+    }
+    exit;
+}
+
+// Display polling → ถามว่ามี command PENDING ไหม
+if ($action === 'poll_command') {
+    header('Content-Type: application/json');
+    $conn = get_db_connection();
+
+    try {
+        // หา command PENDING ที่เก่าสุด
+        $query = "SELECT * FROM (SELECT cmd_id, cmd_type, prize_name, status FROM draw_commands WHERE status = 'PENDING' ORDER BY created_at ASC) WHERE rownum = 1";
+        $stid = oci_parse($conn, $query);
+        oci_execute($stid);
+        $row = oci_fetch_array($stid, OCI_ASSOC);
+        oci_free_statement($stid);
+
+        if ($row) {
+            // เปลี่ยนสถานะเป็น PROCESSING ทันที
+            $upd_query = "UPDATE draw_commands SET status = 'PROCESSING', processed_at = SYSDATE WHERE cmd_id = :id AND status = 'PENDING'";
+            $upd_stid = oci_parse($conn, $upd_query);
+            oci_bind_by_name($upd_stid, ":id", $row['CMD_ID']);
+            oci_execute($upd_stid, OCI_COMMIT_ON_SUCCESS);
+            oci_free_statement($upd_stid);
+
+            oci_close($conn);
+            echo json_encode(['has_command' => true, 'command' => $row]);
+        } else {
+            oci_close($conn);
+            echo json_encode(['has_command' => false]);
+        }
+    } catch (Exception $e) {
+        if (isset($conn)) oci_close($conn);
+        echo json_encode(['has_command' => false, 'error' => $e->getMessage()]);
+    }
+    exit;
+}
+
+// Remote ถามผลลัพธ์ → ดึง status + result ของ command
+if ($action === 'command_result') {
+    header('Content-Type: application/json');
+    $conn = get_db_connection();
+
+    try {
+        $cmd_id = isset($_GET['cmd_id']) ? (int)$_GET['cmd_id'] : 0;
+        if ($cmd_id <= 0) {
+            throw new Exception('Invalid command ID');
+        }
+
+        $query = "SELECT cmd_id, status, result_data FROM draw_commands WHERE cmd_id = :id";
+        $stid = oci_parse($conn, $query);
+        oci_bind_by_name($stid, ":id", $cmd_id);
+        oci_execute($stid);
+        $row = oci_fetch_array($stid, OCI_ASSOC);
+        oci_free_statement($stid);
+        oci_close($conn);
+
+        if ($row) {
+            $result = $row['RESULT_DATA'] ? json_decode($row['RESULT_DATA'], true) : null;
+            echo json_encode(['success' => true, 'status' => $row['STATUS'], 'result' => $result]);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Command not found']);
+        }
+    } catch (Exception $e) {
+        if (isset($conn)) oci_close($conn);
+        echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+    }
+    exit;
+}
+
+// อัพเดทผลลัพธ์กลับไปที่ command (เรียกจาก Display หลังหมุนเสร็จ)
+if ($action === 'update_command_result' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    header('Content-Type: application/json');
+    $conn = get_db_connection();
+
+    try {
+        $input = json_decode(file_get_contents('php://input'), true);
+        $cmd_id = isset($input['cmd_id']) ? (int)$input['cmd_id'] : 0;
+        $result_data = isset($input['result']) ? json_encode($input['result']) : '{}';
+
+        $upd_query = "UPDATE draw_commands SET status = 'DONE', result_data = :result WHERE cmd_id = :id";
+        $upd_stid = oci_parse($conn, $upd_query);
+        oci_bind_by_name($upd_stid, ":result", $result_data);
+        oci_bind_by_name($upd_stid, ":id", $cmd_id);
+        oci_execute($upd_stid, OCI_COMMIT_ON_SUCCESS);
+        oci_free_statement($upd_stid);
+        oci_close($conn);
+
+        echo json_encode(['success' => true]);
+    } catch (Exception $e) {
+        if (isset($conn)) oci_close($conn);
+        echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+    }
+    exit;
+}
 ?>
 <!DOCTYPE html>
 <html lang="th">
@@ -2390,7 +2562,7 @@ if ($action === 'delete_winner' && $_SERVER['REQUEST_METHOD'] === 'POST') {
 
         prizeSelect.addEventListener('change', updatePrizeDisplay);
 
-        async function startDrawing() {
+        async function startDrawing(isRemote = false) {
             if (isDrawing) return;
             const prize = prizeSelect.value;
             if (!prize) {
@@ -2578,6 +2750,31 @@ if ($action === 'delete_winner' && $_SERVER['REQUEST_METHOD'] === 'POST') {
 
             isDrawing = false;
             drawBtn.disabled = false;
+
+            // ถ้าเป็น Remote trigger → ส่งผลลัพธ์กลับไปที่ command
+            if (isRemote && currentRemoteCmdId) {
+                try {
+                    await fetch('?action=update_command_result', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            cmd_id: currentRemoteCmdId,
+                            result: {
+                                id: winner.id,
+                                name: winner.name,
+                                plant: winner.plant,
+                                prize: prize
+                            }
+                        })
+                    });
+                } catch (e) {
+                    console.log('Failed to update command result:', e);
+                }
+                currentRemoteCmdId = null;
+            }
+
             fetchData(); // Refresh data from DB
         }
 
@@ -2640,6 +2837,38 @@ if ($action === 'delete_winner' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                 });
             }
         }
+
+        // === REMOTE POLLING ===
+        // ถาม DB ทุก 1.5 วินาทีว่ามีคำสั่งหมุนจาก Remote ไหม
+        let currentRemoteCmdId = null;
+
+        async function pollRemoteCommand() {
+            if (isDrawing) return; // ถ้ากำลังหมุนอยู่ ไม่ต้อง poll
+
+            try {
+                const res = await fetch('?action=poll_command');
+                const data = await res.json();
+
+                if (data.has_command && data.command) {
+                    currentRemoteCmdId = data.command.CMD_ID;
+                    const remotePrize = data.command.PRIZE_NAME;
+
+                    // เปลี่ยนรางวัลตามที่ Remote เลือก
+                    if (remotePrize) {
+                        prizeSelect.value = remotePrize;
+                        updatePrizeDisplay();
+                    }
+
+                    // เริ่มหมุนอัตโนมัติ!
+                    startDrawing(true); // true = triggered by remote
+                }
+            } catch (err) {
+                console.log('Polling error:', err);
+            }
+        }
+
+        // เริ่ม polling ทุก 1.5 วินาที
+        setInterval(pollRemoteCommand, 1500);
 
         window.onload = fetchData;
 
